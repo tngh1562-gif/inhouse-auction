@@ -1,0 +1,7 @@
+{
+  "name": "auction-server",
+  "version": "1.0.0",
+  "scripts": { "start": "node server.js", "dev": "node server.js" },
+  "dependencies": { "express": "^4.18.2", "ws": "^8.18.0" },
+  "engines": { "node": ">=18" }
+}

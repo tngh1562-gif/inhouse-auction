@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BIDRIFT · 경매내전</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#060910;--surface:#0f1522;--surface-2:#16202e;--surface-3:#1e2c40;
+  --line:#223045;--line-s:#1a2535;
+  --gold:#F0B843;--gold-d:#7a5c1a;--teal:#2dd4bf;--hot:#f43f5e;
+  --text:#dde3f0;--muted:#6b7fa0;--muted2:#3f5068;
+  --r:12px;--r-lg:18px;--sh:0 16px 48px -12px rgba(0,0,0,.7);
+  --fd:'Black Han Sans',sans-serif; --fb:'Noto Sans KR',sans-serif; --fm:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--ink);color:var(--text);font-family:var(--fb);-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;color:var(--text)}
+ul{list-style:none}
+
+/* ── BG ── */
+.bg{position:fixed;inset:0;z-index:-1;pointer-events:none}
+.bg::before{content:'';position:absolute;inset:0;background-image:linear-gradient(var(--line-s) 1px,transparent 1px),linear-gradient(90deg,var(--line-s) 1px,transparent 1px);background-size:44px 44px;opacity:.28;mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 20%,transparent 70%)}
+.bg::after{content:'';position:absolute;left:50%;top:-25%;width:900px;height:600px;transform:translateX(-50%);background:radial-gradient(ellipse,rgba(240,184,67,.08),transparent 65%);filter:blur(30px)}
+
+/* ── TOPBAR ── */
+.topbar{height:52px;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid var(--line);background:rgba(6,9,16,.85);backdrop-filter:blur(10px);flex-shrink:0;z-index:50}
+.brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.brand .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(140deg,var(--gold),var(--gold-d));display:grid;place-items:center;font-family:var(--fd);font-size:18px;color:#160e02;box-shadow:0 0 0 1px rgba(240,184,67,.35),0 4px 14px -4px rgba(240,184,67,.4)}
+.brand b{font-family:var(--fd);font-size:19px;letter-spacing:.5px}
+.brand b span{color:var(--gold)}
+.room-pill{font-family:var(--fm);font-size:11.5px;color:var(--muted);border:1px dashed var(--line);border-radius:7px;padding:3px 9px}
+
+.topnav{display:flex;gap:3px;background:var(--surface);padding:4px;border-radius:9px;border:1px solid var(--line);margin-left:8px}
+.topnav button{padding:6px 14px;border-radius:6px;font-size:12.5px;font-weight:700;color:var(--muted);transition:.15s}
+.topnav button:hover{color:var(--text)}
+.topnav button.active{background:var(--surface-3);color:var(--text)}
+.topnav button .step{font-family:var(--fm);font-size:10px;opacity:.6;margin-right:4px}
+.topnav button.active .step{color:var(--gold);opacity:1}
+
+.ws-pill{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--teal);padding:5px 10px;border-radius:999px;background:rgba(45,212,191,.07);border:1px solid rgba(45,212,191,.22);flex-shrink:0}
+.ws-pill.off{color:var(--hot);background:rgba(244,63,94,.07);border-color:rgba(244,63,94,.25)}
+.ws-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:ping 1.8s infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 currentColor}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+
+.whoami-badge{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);flex-shrink:0}
+.whoami-badge .wd{width:8px;height:8px;border-radius:50%;background:var(--gold)}
+
+.link-btn{font-size:12px;font-weight:800;color:var(--gold);padding:6px 13px;border-radius:999px;background:rgba(240,184,67,.07);border:1px solid rgba(240,184,67,.28);transition:.15s;flex-shrink:0}
+.link-btn:hover{background:rgba(240,184,67,.14)}
+.link-btn.copied{color:var(--teal);border-color:rgba(45,212,191,.35);background:rgba(45,212,191,.08)}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:210px 1fr 268px;height:calc(100vh - 52px);overflow:hidden}
+.col-border-r{border-right:1px solid var(--line)}
+.col-border-l{border-left:1px solid var(--line)}
+
+/* ── LEFT: teams ── */
+.col-teams{display:flex;flex-direction:column;overflow:hidden}
+.col-head{padding:10px 14px 8px;font-size:10.5px;font-weight:800;letter-spacing:1.4px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--line);flex-shrink:0}
+.team-list{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px}
+
+.tcard{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--tc);border-radius:var(--r);padding:10px 11px;transition:.15s;position:relative}
+.tcard.leading{box-shadow:0 0 0 1px var(--tc),0 0 22px -7px var(--tc)}
+.tcard.mine{border-color:var(--gold)!important;box-shadow:0 0 0 1px rgba(240,184,67,.35)}
+.tc-row{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.tc-name{font-weight:800;font-size:13px;display:flex;align-items:center;gap:6px}
+.tc-dot{width:9px;height:9px;border-radius:50%;background:var(--tc);flex-shrink:0}
+.tc-online{width:6px;height:6px;border-radius:50%;background:var(--teal);flex-shrink:0}
+.tc-online.off{background:var(--muted2)}
+.tc-pts{font-family:var(--fm);font-weight:800;font-size:15px;color:var(--gold)}
+.tc-pts small{font-size:9.5px;color:var(--gold-d);font-weight:700}
+.tc-cap{font-size:10.5px;color:var(--muted);margin-top:2px}
+.tc-slots{display:flex;gap:4px;margin-top:8px}
+.sl{flex:1;height:26px;border-radius:6px;background:var(--surface-2);border:1px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:var(--muted2);overflow:hidden;position:relative}
+.sl.filled{border-style:solid;border-color:transparent;background:var(--surface-3);color:var(--text)}
+.sl.filled .sp{font-size:7px;color:var(--tc);font-weight:800;line-height:1}
+.sl.filled .sn{font-size:8px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px;line-height:1.2}
+
+/* ── CENTER ── */
+.col-center{display:flex;flex-direction:column;overflow:hidden;padding:12px;gap:10px}
+
+.stage{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow:hidden}
+
+/* Stage top row: lot + bid display */
+.stage-top{display:grid;grid-template-columns:1fr 210px;gap:10px;flex:1;min-height:0}
+
+/* Lot card */
+.lot-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 18px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden}
+.lot-card::before,.lot-card::after{content:'';position:absolute;width:18px;height:18px;border:1.5px solid var(--gold);opacity:.4}
+.lot-card::before{top:10px;left:10px;border-right:0;border-bottom:0;border-radius:4px 0 0 0}
+.lot-card::after{bottom:10px;right:10px;border-left:0;border-top:0;border-radius:0 0 4px 0}
+.lot-card .lot-avatar{width:62px;height:62px;border-radius:14px;background:linear-gradient(150deg,var(--surface-3),#070c18);display:grid;place-items:center;font-family:var(--fd);font-size:28px;color:var(--gold);border:1px solid var(--line);flex-shrink:0}
+.lot-card .lot-info{flex:1;min-width:0}
+.lot-eyebrow{font-family:var(--fm);font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.8;text-transform:uppercase;margin-bottom:4px}
+.lot-nick{font-family:var(--fd);font-size:24px;letter-spacing:.3px;line-height:1;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lot-tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}
+.tag.tier{color:var(--gold);border-color:rgba(240,184,67,.25)}
+.lot-card.empty{min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--muted);gap:6px}
+.lot-card.empty .eg{font-size:28px;opacity:.35}
+.lot-card.active{flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;padding:24px 20px;height:100%}
+.champ-row{display:flex;gap:14px;justify-content:center}
+.champ-img{width:72px;height:72px;border-radius:50%;border:2px solid rgba(240,184,67,.5);object-fit:cover;background:var(--surface-3);box-shadow:0 0 18px -6px rgba(240,184,67,.3)}
+.champ-empty{width:72px;height:72px;border-radius:50%;border:2px dashed var(--line);background:var(--surface-2);display:grid;place-items:center;color:var(--muted2);font-size:22px}
+.lot-nick-main{font-family:var(--fd);font-size:32px;letter-spacing:.4px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.lot-nick-sub{font-size:13.5px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+
+/* Bid display */
+.bid-display{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:13px 14px;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;height:100%}
+.bd-label{font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;font-weight:700}
+.bid-amount{font-family:var(--fm);font-weight:800;font-size:34px;color:var(--gold);font-variant-numeric:tabular-nums;line-height:1;text-shadow:0 0 20px rgba(240,184,67,.2)}
+.bid-amount .unit{font-size:14px;color:var(--gold-d);margin-left:3px}
+.lead-chip{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--lead,var(--muted)) 14%,transparent);color:var(--lead,var(--muted));border:1px solid color-mix(in srgb,var(--lead,var(--muted)) 36%,transparent);transition:.2s}
+.lead-chip.pulse{animation:chip .9s ease}
+@keyframes chip{0%{transform:scale(1)}35%{transform:scale(1.1)}100%{transform:scale(1)}}
+.lead-chip .ld{width:7px;height:7px;border-radius:50%;background:currentColor}
+.timer{position:relative;width:90px;height:90px;margin-top:2px}
+.timer svg{transform:rotate(-90deg)}
+.timer .t-track{fill:none;stroke:var(--surface-3);stroke-width:7}
+.timer .t-prog{fill:none;stroke:var(--teal);stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .28s linear,stroke .3s}
+.timer .t-num{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--fm);font-weight:800;font-size:28px;font-variant-numeric:tabular-nums}
+.timer.warn .t-prog{stroke:var(--hot)}
+.timer.warn .t-num{color:var(--hot);animation:tick .55s infinite}
+@keyframes tick{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+
+/* Controls area */
+.controls-area{flex-shrink:0;display:flex;flex-direction:column;gap:9px}
+
+/* Host controls */
+.step-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.seg{display:flex;gap:3px;background:var(--surface-2);padding:3px;border-radius:8px;border:1px solid var(--line)}
+.seg button{padding:4px 10px;border-radius:5px;font-family:var(--fm);font-weight:700;font-size:11.5px;color:var(--muted);transition:.12s}
+.seg button.on{background:var(--gold);color:#140a00}
+.bid-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.tbid{padding:9px 11px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);border-left:3px solid var(--tc);display:flex;flex-direction:column;gap:2px;text-align:left;transition:.14s}
+.tbid:hover:not(:disabled){background:var(--surface-3);transform:translateY(-1px)}
+.tbid:disabled{opacity:.38;cursor:not-allowed}
+.tbid .tn{font-weight:800;font-size:12.5px;display:flex;align-items:center;gap:5px}
+.tbid .tn i{width:7px;height:7px;border-radius:50%;background:var(--tc);font-style:normal;flex-shrink:0}
+.tbid .tv{font-family:var(--fm);font-size:12px;color:var(--gold);font-variant-numeric:tabular-nums}
+.tbid .tv.low{color:var(--hot)}
+
+.action-row{display:flex;gap:7px}
+.btn{flex:1;padding:11px;border-radius:10px;font-weight:800;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:7px;transition:.15s}
+.btn:hover{transform:translateY(-1px)}
+.btn.sell{background:linear-gradient(140deg,var(--gold),var(--gold-d));color:#140a00;box-shadow:0 6px 18px -7px rgba(240,184,67,.55)}
+.btn.sell:disabled{filter:grayscale(.7);opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn.pass{background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}
+.btn.pass:hover{color:var(--hot);border-color:var(--hot)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);flex:0 0 auto;padding:11px 13px;font-size:13px}
+
+/* Captain controls */
+.captain-box{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--tc);border-radius:var(--r-lg);padding:14px 16px}
+.cap-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cap-team{font-weight:800;font-size:14px;display:flex;align-items:center;gap:7px}
+.cap-team i{width:10px;height:10px;border-radius:50%;background:var(--tc);font-style:normal}
+.cap-pts{font-family:var(--fm);font-weight:800;font-size:18px;color:var(--gold)}
+.cap-pts small{font-size:10px;color:var(--gold-d)}
+.big-bid{width:100%;padding:16px;border-radius:12px;font-family:var(--fd);font-size:21px;letter-spacing:.5px;background:linear-gradient(140deg,var(--tc),color-mix(in srgb,var(--tc) 50%,#000));color:#fff;box-shadow:0 8px 24px -10px var(--tc);transition:.13s}
+.big-bid:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 28px -10px var(--tc)}
+.big-bid:active:not(:disabled){transform:translateY(1px) scale(.99)}
+.big-bid:disabled{filter:grayscale(.55);opacity:.5;cursor:not-allowed;box-shadow:none}
+.big-bid .bsub{display:block;font-family:var(--fm);font-size:12px;opacity:.82;margin-top:3px;letter-spacing:0}
+.cap-hint{text-align:center;font-size:11.5px;color:var(--muted);margin-top:8px}
+.cap-hint b{color:var(--gold)}
+
+/* Queue strip */
+.queue-bar{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;flex-shrink:0}
+.queue-head{display:flex;align-items:center;gap:7px;padding:7px 12px;border-bottom:1px solid var(--line);font-size:10.5px;font-weight:800;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase}
+.queue-head .qrem{margin-left:auto;font-family:var(--fm);color:var(--gold);font-weight:700;font-size:11px;letter-spacing:0;text-transform:none}
+.queue-strip{display:flex;gap:7px;padding:9px 12px;overflow-x:auto}
+.qcard{flex:0 0 auto;width:104px;padding:9px 10px;border-radius:9px;background:var(--surface-2);border:1px solid var(--line);transition:.14s;cursor:pointer}
+.qcard.host-q:hover{border-color:var(--gold);transform:translateY(-2px)}
+.qcard.active-q{border-color:var(--teal);background:rgba(45,212,191,.07)}
+.qcard.done-q{opacity:.4;cursor:default}
+.qcard .qpos{font-size:9.5px;font-weight:800;color:var(--gold);letter-spacing:.4px}
+.qcard .qnick{font-weight:700;font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qcard .qtier{font-size:9.5px;color:var(--muted);margin-top:1px}
+.qcard .qbadge{font-size:9px;font-weight:800;margin-top:4px}
+.qcard .qbadge.sold{color:var(--teal)}
+.qcard .qbadge.pass{color:var(--hot)}
+.qcard .qbadge.live{color:var(--gold)}
+
+/* ── RIGHT: log+chat ── */
+.col-side{display:flex;flex-direction:column;overflow:hidden}
+.side-tabs{display:flex;gap:3px;padding:10px 12px 8px;border-bottom:1px solid var(--line);flex-shrink:0}
+.side-tabs button{flex:1;padding:7px;border-radius:7px;font-weight:700;font-size:12.5px;color:var(--muted);transition:.13s}
+.side-tabs button.active{background:var(--surface-3);color:var(--text)}
+.side-tabs .badge{font-family:var(--fm);font-size:9.5px;color:var(--gold);margin-left:4px}
+.feed-wrap{flex:1;min-height:0;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:7px}
+.feed-wrap.hidden{display:none}
+
+.log-item{display:flex;align-items:center;gap:8px;font-size:12.5px;animation:sin .28s ease}
+@keyframes sin{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}
+.log-item .lt{font-family:var(--fm);font-size:10px;color:var(--muted2);flex:0 0 auto}
+.log-item .ldot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.log-item .ltxt{flex:1;line-height:1.4}
+.log-item .ltxt b{font-weight:800}
+.log-item .lamt{font-family:var(--fm);font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums;flex-shrink:0}
+.log-item.sys .ltxt{color:var(--muted);font-size:12px}
+.log-item.sold{background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.18);border-radius:8px;padding:7px 9px}
+.log-item.sold .lamt{color:var(--teal)}
+.log-item.pass-log .ltxt{color:var(--hot)}
+
+.chat-msg{font-size:12.5px;line-height:1.5}
+.chat-msg b{font-weight:800}
+.chat-msg .rl{font-size:9.5px;color:var(--muted2);margin-left:3px}
+
+.chat-row{display:flex;gap:7px;padding:10px 12px;border-top:1px solid var(--line);flex-shrink:0}
+.chat-row input{flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12.5px;outline:none}
+.chat-row input:focus{border-color:var(--teal)}
+.chat-row button{padding:0 13px;border-radius:8px;background:var(--teal);color:#031a18;font-weight:800;font-size:12.5px}
+
+/* ── SETUP VIEW ── */
+.setup-view{flex:1;overflow-y:auto;padding:18px}
+.setup-grid{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.ph{display:flex;align-items:center;gap:8px;padding:12px 15px;border-bottom:1px solid var(--line);font-size:11px;font-weight:800;letter-spacing:1.3px;color:var(--muted);text-transform:uppercase}
+.ph .ko{letter-spacing:0;font-size:13px;color:var(--text);text-transform:none}
+.pb{padding:16px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.field input,.field select{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13.5px;outline:none}
+.field input:focus,.field select:focus{border-color:var(--gold)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field .hint{font-size:10.5px;color:var(--muted2);margin-top:5px}
+.start-btn{width:100%;padding:13px;border-radius:11px;font-weight:800;font-size:15px;background:linear-gradient(140deg,var(--gold),var(--gold-d));color:#140a00;box-shadow:0 8px 20px -8px rgba(240,184,67,.5);transition:.15s;margin-top:4px}
+.start-btn:hover{transform:translateY(-1px)}
+
+.add-form{display:flex;gap:7px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
+.add-form input,.add-form select{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none}
+.add-form input.grow{flex:1;min-width:100px}
+.add-form button{background:var(--gold);color:#140a00;font-weight:800;border-radius:8px;padding:8px 14px;font-size:12.5px;flex-shrink:0}
+.row-list{max-height:280px;overflow-y:auto}
+.srow{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line-s);font-size:12.5px}
+.srow:hover{background:var(--surface-2)}
+.srow .rpos{font-family:var(--fm);font-size:10.5px;font-weight:800;color:var(--gold);width:32px;flex-shrink:0}
+.srow .rnick{font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow .rtier{font-size:11.5px;color:var(--muted)}
+.srow .rcol{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.srow .del{margin-left:auto;color:var(--muted2);width:24px;height:24px;border-radius:6px;font-size:13px;display:grid;place-items:center}
+.srow .del:hover{background:rgba(244,63,94,.12);color:var(--hot)}
+.empty-row{padding:20px;text-align:center;font-size:12px;color:var(--muted2)}
+.count-badge{color:var(--muted);font-weight:400;letter-spacing:0;font-size:12px;text-transform:none}
+
+/* ── RESULT VIEW ── */
+.result-view{flex:1;overflow-y:auto;padding:18px}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:20px}
+.rteam{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;border-top:3px solid var(--tc)}
+.rhead{padding:12px 14px;display:flex;align-items:center;justify-content:space-between}
+.rhead .rt{font-family:var(--fd);font-size:16px;display:flex;align-items:center;gap:7px}
+.rhead .rt i{width:9px;height:9px;border-radius:50%;background:var(--tc);font-style:normal}
+.rhead .rp{text-align:right}
+.rhead .rp .rpv{font-family:var(--fm);font-weight:800;font-size:15px;color:var(--gold)}
+.rhead .rp .rpl{font-size:9.5px;color:var(--muted)}
+.rrow{display:flex;align-items:center;gap:9px;padding:8px 14px;border-top:1px solid var(--line-s);font-size:12.5px}
+.rrow .rpos{font-family:var(--fm);font-size:10px;font-weight:800;color:var(--tc);width:32px;flex-shrink:0}
+.rrow .rnk{font-weight:700;flex:1}
+.rrow .rpr{font-family:var(--fm);font-size:11.5px;color:var(--gold)}
+.matchup-grid{display:flex;flex-direction:column;gap:8px}
+.match-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px}
+.match-row .seed{font-family:var(--fm);font-size:11px;color:var(--gold);font-weight:800;width:52px;flex-shrink:0}
+.match-row .mside{display:flex;align-items:center;gap:7px;font-weight:700;font-size:13.5px;flex:1}
+.match-row .mside i{width:9px;height:9px;border-radius:50%;font-style:normal;flex-shrink:0}
+.match-row .vs{font-family:var(--fd);color:var(--muted);font-size:13px;padding:0 4px;flex-shrink:0}
+.sec-title{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
+.sec-title h2{font-family:var(--fd);font-size:20px}
+.sec-title .line{flex:1;height:1px;background:var(--line)}
+
+/* ── OVERLAYS ── */
+.overlay{position:fixed;inset:0;z-index:200;background:rgba(4,6,12,.88);backdrop-filter:blur(12px);display:grid;place-items:center;padding:20px}
+.overlay.hidden{display:none}
+.over-card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:24px;box-shadow:var(--sh)}
+.over-card h2{font-family:var(--fd);font-size:24px;text-align:center;margin-bottom:6px}
+.over-card .sub{text-align:center;color:var(--muted);font-size:12.5px;margin-bottom:20px}
+.over-card label{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin:13px 0 6px}
+.over-card input,.over-card select{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:11px 12px;font-size:14px;outline:none}
+.over-card input:focus,.over-card select:focus{border-color:var(--gold)}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}
+.role-btn{padding:12px 8px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);font-weight:800;font-size:13px;transition:.13s;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center}
+.role-btn .ic{font-size:18px}
+.role-btn.on{border-color:var(--gold);background:rgba(240,184,67,.1);color:var(--gold)}
+.go-btn{width:100%;margin-top:20px;padding:13px;border-radius:11px;background:linear-gradient(140deg,var(--gold),var(--gold-d));color:#140a00;font-weight:800;font-size:14.5px}
+.go-btn:disabled{opacity:.4;cursor:not-allowed}
+.err-msg{color:var(--hot);font-size:12px;text-align:center;margin-top:10px;min-height:15px}
+
+/* Landing */
+.landing{position:fixed;inset:0;z-index:300;background:var(--ink);display:grid;place-items:center}
+.landing.hidden{display:none}
+.land-card{text-align:center;display:flex;flex-direction:column;align-items:center;gap:0}
+.land-card .lmark{width:72px;height:72px;border-radius:20px;background:linear-gradient(140deg,var(--gold),var(--gold-d));display:grid;place-items:center;font-family:var(--fd);font-size:38px;color:#160e02;box-shadow:0 0 0 1px rgba(240,184,67,.35),0 10px 40px -8px rgba(240,184,67,.45);margin-bottom:20px}
+.land-card h1{font-family:var(--fd);font-size:42px;letter-spacing:1px;margin-bottom:6px}
+.land-card h1 span{color:var(--gold)}
+.land-card .lsub{color:var(--muted);font-size:14px;margin-bottom:36px;line-height:1.6}
+.create-btn{padding:16px 44px;border-radius:14px;background:linear-gradient(140deg,var(--gold),var(--gold-d));color:#140a00;font-weight:800;font-size:16px;box-shadow:0 10px 30px -8px rgba(240,184,67,.5);transition:.15s;letter-spacing:.3px}
+.create-btn:hover{transform:translateY(-2px);box-shadow:0 14px 36px -8px rgba(240,184,67,.55)}
+.create-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.land-note{color:var(--muted2);font-size:12px;margin-top:16px}
+
+/* Waiting screen */
+.waiting{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--muted)}
+.waiting .wg{font-size:36px;opacity:.35;margin-bottom:4px}
+
+/* Toast */
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(16px);background:var(--surface-3);border:1px solid var(--line);border-radius:10px;padding:11px 20px;font-weight:700;font-size:13.5px;box-shadow:var(--sh);opacity:0;pointer-events:none;transition:.28s;z-index:500;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:6px}::-webkit-scrollbar-track{background:transparent}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<!-- ── LANDING ── -->
+<div class="landing" id="landing">
+  <div class="land-card">
+    <div class="lmark">B</div>
+    <h1>BID<span>RIFT</span></h1>
+    <p class="lsub">20인 경매내전 실시간 플랫폼<br>방을 만들고 팀장들에게 링크를 공유하세요</p>
+    <button class="create-btn" id="createBtn">방 만들기</button>
+    <p class="land-note">방을 만들면 고유한 1회용 URL이 생성됩니다</p>
+  </div>
+</div>
+
+<!-- ── JOIN OVERLAY ── -->
+<div class="overlay hidden" id="overlayJoin">
+  <div class="over-card">
+    <h2>경매 입장</h2>
+    <p class="sub" id="joinSub">역할을 선택하고 입장하세요</p>
+    <label>닉네임</label>
+    <input id="joinName" placeholder="화면에 표시될 이름" maxlength="20"/>
+    <label>역할</label>
+    <div class="role-grid" id="roleGrid">
+      <!-- JS로 동적 생성 -->
+    </div>
+    <button class="go-btn" id="joinGo">입장</button>
+    <div class="err-msg" id="joinErr"></div>
+  </div>
+</div>
+
+<!-- ── MAIN APP ── -->
+<div class="hidden" id="app">
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">B</div>
+      <b>BID<span>RIFT</span></b>
+      <span class="room-pill" id="roomPill">ROOM</span>
+    </div>
+    <nav class="topnav hidden" id="topnav">
+      <button data-view="setup"><span class="step">01</span>설정</button>
+      <button data-view="auction" class="active"><span class="step">02</span>경매</button>
+      <button data-view="result"><span class="step">03</span>결과</button>
+    </nav>
+    <div style="flex:1"></div>
+    <button class="link-btn hidden" id="linkBtn">🔗 방 링크 복사</button>
+    <div class="whoami-badge hidden" id="whoamiBadge"><span class="wd"></span><span id="whoamiTxt"></span></div>
+    <div class="ws-pill off" id="wsPill"><span class="ws-dot"></span><span id="wsTxt">연결 중…</span></div>
+  </header>
+
+  <!-- ── VIEWS ── -->
+
+  <!-- WAITING (non-host, setup phase) -->
+  <div class="hidden" id="view-waiting" style="height:calc(100vh - 52px)">
+    <div class="waiting">
+      <div class="wg">⚑</div>
+      <div style="font-weight:700;font-size:15px;color:var(--text)">진행자가 경매를 준비 중입니다</div>
+      <div style="font-size:13px">잠시 후 자동으로 시작됩니다</div>
+    </div>
+  </div>
+
+  <!-- SETUP (host only) -->
+  <div class="hidden" id="view-setup" style="height:calc(100vh - 52px);display:flex;flex-direction:column">
+    <div class="setup-view">
+      <div class="setup-grid">
+        <!-- 규칙 -->
+        <div class="panel">
+          <div class="ph"><span>RULES</span><span class="ko">경매 규칙</span></div>
+          <div class="pb">
+            <div class="field"><label>방 이름</label><input id="cfgRoom" value="치지직 20인 경매내전"/></div>
+            <div class="field-row">
+              <div class="field"><label>팀장 시작 포인트</label><input id="cfgPoints" type="number" value="1000"/></div>
+              <div class="field"><label>입찰 단위</label><input id="cfgStep" type="number" value="50"/></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>기본 타이머(초)</label><input id="cfgTimer" type="number" value="30"/></div>
+              <div class="field"><label>입찰 시 추가(초)</label><input id="cfgAdd" type="number" value="5"/></div>
+            </div>
+            <div class="field"><label>팀당 인원 (팀장 포함)</label><input id="cfgSize" type="number" value="5"/><div class="hint">팀장 1 + 영입 선수</div></div>
+            <button class="start-btn" onclick="applyConfig()">설정 적용</button>
+            <button class="start-btn" style="background:linear-gradient(140deg,var(--teal),#0d9488);color:#031a18;margin-top:8px" onclick="Net.send({type:'startAuction'})">경매 시작 →</button>
+          </div>
+        </div>
+        <!-- 팀·선수 -->
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <!-- 내전사이트 연동 -->
+          <div class="panel">
+            <div class="ph"><span>IMPORT</span><span class="ko">내전사이트 연동</span></div>
+            <div class="pb" style="padding-bottom:0">
+              <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
+                <div class="field" style="margin-bottom:0">
+                  <label>내전사이트 주소</label>
+                  <input id="inhouseUrl" value="http://localhost:3000" placeholder="https://your-site.up.railway.app"/>
+                </div>
+                <button onclick="importInhouse()" id="importBtn" style="padding:10px 16px;border-radius:9px;background:linear-gradient(140deg,var(--teal),#0d9488);color:#031a18;font-weight:800;font-size:12.5px;height:42px;white-space:nowrap">불러오기</button>
+              </div>
+                <div id="importStatus" style="font-size:11.5px;color:var(--muted);margin-top:7px;min-height:16px"></div>
+            </div>
+            <div id="importSearchWrap" style="display:none;padding:8px 14px;border-top:1px solid var(--line)">
+              <input id="importSearch" placeholder="닉네임 / 티어 / 포지션 검색…" oninput="renderImportList()" style="width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:12.5px;outline:none;color:var(--text)"/>
+            </div>
+            <div class="row-list" id="importList" style="max-height:240px"></div>
+            <div id="importApplyWrap" class="hidden" style="padding:10px 14px;border-top:1px solid var(--line);flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span id="importCount" style="font-size:12px;color:var(--muted);flex:1"></span>
+                <button onclick="bulkMarkFiltered('pool')" style="padding:5px 11px;border-radius:7px;background:rgba(240,184,67,.12);color:var(--gold);border:1px solid rgba(240,184,67,.3);font-size:11.5px;font-weight:800">검색결과 전체 매물</button>
+                <button onclick="bulkMarkFiltered('skip')" style="padding:5px 11px;border-radius:7px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line);font-size:11.5px;font-weight:800">전체 제외</button>
+              </div>
+              <button onclick="applyImport()" id="importApplyBtn" style="width:100%;padding:10px;border-radius:9px;background:linear-gradient(140deg,var(--gold),var(--gold-d));color:#140a00;font-weight:800;font-size:13px">가져오기</button>
+            </div>
+          </div>
+          <!-- 입장한 팀장 -->
+          <div class="panel">
+            <div class="ph"><span>CAPTAINS</span><span class="ko">입장한 팀장 <span class="count-badge" id="capWaitCount"></span></span></div>
+            <div class="row-list" id="capWaitList"></div>
+          </div>
+          <!-- 팀 -->
+          <div class="panel">
+            <div class="ph"><span>TEAMS</span><span class="ko">팀 <span class="count-badge" id="capCount"></span></span></div>
+            <div class="row-list" id="capList"></div>
+          </div>
+          <!-- 매물 -->
+          <div class="panel">
+            <div class="ph"><span>POOL</span><span class="ko">매물 풀 <span class="count-badge" id="poolCount"></span></span></div>
+            <div class="add-form">
+              <input class="grow" id="addNick" placeholder="닉네임"/>
+              <select id="addPos"><option>TOP</option><option>JG</option><option>MID</option><option>ADC</option><option>SUP</option></select>
+              <input id="addTier" placeholder="티어" style="width:90px"/>
+              <input id="addElo" type="number" placeholder="Elo" style="width:72px"/>
+              <button onclick="addPlayer()">+ 추가</button>
+            </div>
+            <div class="row-list" id="poolList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUCTION (main, 3-col) -->
+  <div class="hidden" id="view-auction">
+    <div class="layout">
+      <!-- Left -->
+      <aside class="col-teams col-border-r">
+        <div class="col-head">TEAMS <span style="color:var(--gold);font-family:var(--fm);letter-spacing:0;text-transform:none;font-weight:700" id="teamCount"></span></div>
+        <div class="team-list" id="teamRail"></div>
+      </aside>
+
+      <!-- Center -->
+      <div class="col-center">
+        <div class="stage">
+          <!-- Lot + bid -->
+          <div class="stage-top">
+            <div class="lot-card" id="lotCard">
+              <div class="eg">⚑</div>
+              <div style="font-weight:700;font-size:14px;color:var(--text)">대기 중</div>
+            </div>
+            <div class="bid-display">
+              <div class="bd-label">현재 최고 입찰</div>
+              <div class="bid-amount" id="bidAmount">—</div>
+              <div class="lead-chip hidden" id="leadChip"><span class="ld"></span><span id="leadName">-</span></div>
+              <div class="timer" id="timer">
+                <svg width="90" height="90" viewBox="0 0 90 90">
+                  <circle class="t-track" cx="45" cy="45" r="38"/>
+                  <circle class="t-prog" id="timerProg" cx="45" cy="45" r="38"/>
+                </svg>
+                <div class="t-num" id="timerNum">--</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Host controls -->
+          <div class="controls-area hidden" id="hostControls">
+            <div class="step-row">
+              <span>입찰 단위</span>
+              <div class="seg" id="stepSeg"></div>
+              <span style="margin-left:auto;font-size:11px;color:var(--muted2)">팀 버튼 클릭 = 해당 팀 대리입찰</span>
+            </div>
+            <div class="bid-grid" id="bidGrid"></div>
+            <div class="action-row">
+              <button class="btn ghost" onclick="Net.send({type:'undo'})">↶ 취소</button>
+              <button class="btn pass" onclick="Net.send({type:'pass'})">유찰</button>
+              <button class="btn sell" id="sellBtn" onclick="Net.send({type:'sell'})">낙찰 확정 →</button>
+            </div>
+          </div>
+
+          <!-- Captain controls -->
+          <div class="captain-box hidden" id="captainControls">
+            <div class="cap-top">
+              <div class="cap-team" id="capTeamLabel"><i></i>내 팀</div>
+              <div class="cap-pts" id="capPts">— <small>P</small></div>
+            </div>
+            <button class="big-bid" id="bigBidBtn" onclick="Net.send({type:'bid'})">
+              입찰<span class="bsub" id="bigBidSub">진행 중인 매물이 없습니다</span>
+            </button>
+            <div class="cap-hint" id="capHint"></div>
+          </div>
+
+          <!-- Viewer note -->
+          <div class="hidden" id="viewerNote" style="text-align:center;padding:10px;font-size:12.5px;color:var(--muted)">관전 모드 — 입찰권 없음</div>
+        </div>
+
+        <!-- Queue -->
+        <div class="queue-bar">
+          <div class="queue-head">QUEUE <span style="margin-left:6px;color:var(--muted)">대기열</span><span class="qrem" id="queueRemain"></span></div>
+          <div class="queue-strip" id="queueStrip"></div>
+        </div>
+      </div>
+
+      <!-- Right -->
+      <aside class="col-side col-border-l">
+        <div class="side-tabs">
+          <button class="active" data-tab="log" onclick="switchTab('log')">입찰<span class="badge" id="logBadge"></span></button>
+          <button data-tab="chat" onclick="switchTab('chat')">채팅</button>
+        </div>
+        <div class="feed-wrap" id="logFeed"></div>
+        <div class="feed-wrap hidden" id="chatFeed"></div>
+        <div class="chat-row">
+          <input id="chatInput" placeholder="메시지…" maxlength="200" onkeydown="if(event.key==='Enter')sendChat()"/>
+          <button onclick="sendChat()">전송</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="hidden" id="view-result" style="height:calc(100vh - 52px)">
+    <div class="result-view">
+      <div class="sec-title"><h2>최종 팀 구성</h2><span class="line"></span></div>
+      <div class="result-grid" id="resultGrid"></div>
+      <div class="sec-title" style="margin-top:8px"><h2>대진 선택권</h2><span class="line"></span></div>
+      <div class="matchup-grid" id="bracket"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ─── State ─────────────────────────────────────────────────── */
+const $ = s => document.querySelector(s);
+const fmt = n => (n||0).toLocaleString('ko-KR');
+const params = new URLSearchParams(location.search);
+const ROOM_ID   = (params.get('room') || '').toUpperCase();
+const HOST_TOKEN = params.get('host') || '';
+
+let STATE    = null;
+let YOU      = { role: 'pending', teamId: null, id: null };
+let CAN_HOST = false; // 서버가 init 때 알려줌
+let activeTab = 'log';
+let selectedRole = HOST_TOKEN ? 'host' : 'captain';
+
+/* ─── Landing page ──────────────────────────────────────────── */
+if (!ROOM_ID) {
+  $('#app').classList.add('hidden');
+} else {
+  $('#landing').classList.add('hidden');
+}
+
+$('#createBtn').addEventListener('click', async () => {
+  const btn = $('#createBtn');
+  btn.disabled = true; btn.textContent = '방 생성 중…';
+  try {
+    const res  = await fetch('/api/create-room', { method:'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      location.href = `/?room=${data.roomId}&host=${data.hostToken}`;
+    }
+  } catch { btn.disabled = false; btn.textContent = '방 만들기'; }
+});
+
+/* ─── Network ───────────────────────────────────────────────── */
+const Net = {
+  ws: null, ready: false,
+  connect() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    this.ws = new WebSocket(`${proto}://${location.host}`);
+    this.ws.onopen = () => {
+      setWs(true);
+      this.ready = true;
+      this.send({ type:'hello', roomId: ROOM_ID, hostToken: HOST_TOKEN });
+    };
+    this.ws.onclose = () => { setWs(false); this.ready = false; setTimeout(() => this.connect(), 1800); };
+    this.ws.onmessage = e => handle(JSON.parse(e.data));
+  },
+  send(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); }
+};
+
+function setWs(ok) {
+  const p = $('#wsPill');
+  p.classList.toggle('off', !ok);
+  $('#wsTxt').textContent = ok ? 'LIVE' : '재연결 중…';
+}
+
+/* ─── Message handler ───────────────────────────────────────── */
+function handle(m) {
+  if (m.type === 'state') { STATE = m.state; renderAll(); }
+  else if (m.type === 'welcome') {
+    YOU = m.you;
+    afterJoin();
+    if (STATE) renderAll();
+  }
+  else if (m.type === 'init') {
+    STATE = m.state;
+    CAN_HOST = !!m.canHost;
+    showJoinOverlay();
+  }
+  else if (m.type === 'tick') {
+    if (STATE) { STATE.timer.remaining = m.remaining; renderTimer(); }
+  }
+  else if (m.type === 'chat_update') {
+    if (STATE) { STATE.chat = m.chat; renderChat(); }
+  }
+  else if (m.type === 'assigned') { YOU.teamId = m.teamId; if (STATE) renderAll(); }
+  else if (m.type === 'toast') { toast(m.msg); }
+  else if (m.type === 'error') { toast(m.msg); $('#joinErr').textContent = m.msg; }
+}
+
+/* ─── Join flow ─────────────────────────────────────────────── */
+function showJoinOverlay() {
+  if (!STATE) return;
+  $('#app').classList.remove('hidden');
+  buildRoleButtons();
+  $('#overlayJoin').classList.remove('hidden');
+}
+
+function buildRoleButtons() {
+  const grid = $('#roleGrid');
+  if (CAN_HOST) {
+    grid.innerHTML = `
+      <button class="role-btn ${selectedRole==='host'?'on':''}" data-role="host"><span class="ic">🎙️</span>진행자</button>
+      <button class="role-btn ${selectedRole==='captain'?'on':''}" data-role="captain"><span class="ic">🛡️</span>팀장</button>`;
+    $('#joinSub').textContent = '진행자로 입장하거나 팀장으로 직접 참가하세요';
+  } else {
+    grid.innerHTML = `
+      <button class="role-btn on" data-role="captain" style="grid-column:1/-1"><span class="ic">🛡️</span>팀장으로 참가</button>`;
+    selectedRole = 'captain';
+    $('#joinSub').textContent = '닉네임을 입력하고 입장하세요. 진행자가 팀을 배정합니다.';
+  }
+}
+
+$('#overlayJoin').addEventListener('click', e => {
+  const b = e.target.closest('.role-btn'); if(!b) return;
+  selectedRole = b.dataset.role;
+  document.querySelectorAll('#roleGrid .role-btn').forEach(x => x.classList.toggle('on', x===b));
+});
+
+$('#joinGo').addEventListener('click', () => {
+  const name = $('#joinName').value.trim();
+  if (!name) { $('#joinErr').textContent = '닉네임을 입력하세요'; return; }
+  Net.send({ type:'join', role:selectedRole, name });
+});
+
+function afterJoin() {
+  $('#overlayJoin').classList.add('hidden');
+  $('#app').classList.remove('hidden');
+  const b = $('#whoamiBadge'); b.classList.remove('hidden');
+  const roleLabel = YOU.role==='host'?'진행자':YOU.role==='captain'?'팀장':'관전자';
+  $('#whoamiTxt').textContent = roleLabel;
+  if (YOU.role === 'host') {
+    $('#topnav').classList.remove('hidden');
+    $('#linkBtn').classList.remove('hidden');
+  }
+  if (YOU.role === 'captain') {
+    $('#linkBtn').classList.remove('hidden');
+  }
+}
+
+/* ─── Room link (1회용 URL — room-specific URL) ─────────────── */
+$('#linkBtn').addEventListener('click', async () => {
+  const url = `${location.origin}/?room=${ROOM_ID}`;
+  try { await navigator.clipboard.writeText(url); }
+  catch { const t=document.createElement('textarea');t.value=url;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove(); }
+  const b = $('#linkBtn');
+  b.classList.add('copied'); b.textContent = '✓ 복사됨';
+  toast('방 링크 복사됨 — 팀장들에게 공유하세요');
+  setTimeout(() => { b.classList.remove('copied'); b.textContent = '🔗 방 링크 복사'; }, 2000);
+});
+
+/* ─── View switching ────────────────────────────────────────── */
+$('#topnav').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b||!b.dataset.view) return;
+  setView(b.dataset.view);
+});
+
+function setView(v) {
+  document.querySelectorAll('#topnav button').forEach(b => b.classList.toggle('active', b.dataset.view===v));
+  ['setup','auction','result','waiting'].forEach(n => {
+    const el = $(`#view-${n}`);
+    if (el) el.classList.toggle('hidden', n!==v);
+  });
+  if (v==='result') renderResult();
+  if (v==='setup')  renderSetup();
+}
+
+function autoView() {
+  if (!STATE) return;
+  if (YOU.role === 'host') {
+    setView(STATE.phase === 'setup' ? 'setup' : STATE.phase === 'ended' ? 'result' : 'auction');
+  } else {
+    if (STATE.phase === 'setup') setView('waiting');
+    else if (STATE.phase === 'ended') setView('result');
+    else setView('auction');
+  }
+}
+
+/* ─── Render all ────────────────────────────────────────────── */
+function renderAll() {
+  if (!STATE) return;
+  $('#roomPill').textContent = 'ROOM · ' + ROOM_ID;
+  autoView();
+  renderTeamRail();
+  renderLot();
+  renderBid();
+  renderTimer();
+  renderHostControls();
+  renderCaptainControls();
+  renderViewerNote();
+  renderQueue();
+  renderLog();
+  renderChat();
+}
+
+function teamById(id) { return STATE && STATE.teams.find(t=>t.id===id); }
+function curLot()     { return STATE && STATE.pool.find(p=>p.id===STATE.currentId); }
+
+/* ─── Team rail ─────────────────────────────────────────────── */
+function renderTeamRail() {
+  if (!STATE) return;
+  const lead = STATE.bid.teamId;
+  $('#teamCount').textContent = STATE.teams.length + '팀';
+  $('#teamRail').innerHTML = STATE.teams.map(t => {
+    const mine = YOU.teamId === t.id;
+    const slots = [];
+    const cap = { nick: t.captainName || '대기 중', pos:'C', isCap:true };
+    const allMembers = t.captainName ? [cap, ...t.roster] : [cap, ...t.roster];
+    for (let i = 0; i < STATE.config.teamSize; i++) {
+      const m = allMembers[i];
+      if (m) {
+        slots.push(`<div class="sl filled" style="--tc:${t.color}">
+          <span class="sp">${m.isCap?'C':m.pos}</span>
+          <span class="sn">${m.nick.length>6?m.nick.slice(0,5)+'…':m.nick}</span>
+        </div>`);
+      } else {
+        slots.push(`<div class="sl">빈</div>`);
+      }
+    }
+    return `<div class="tcard ${lead===t.id?'leading':''} ${mine?'mine':''}" style="--tc:${t.color}">
+      <div class="tc-row">
+        <div class="tc-name">
+          <span class="tc-dot"></span>
+          ${t.name}
+          ${mine?'<span style="font-size:9px;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:1px 4px">나</span>':''}
+        </div>
+        <span class="tc-online ${t.online?'':'off'}" title="${t.online?'온라인':'오프라인'}"></span>
+      </div>
+      <div class="tc-row" style="margin-top:3px">
+        <div class="tc-cap">${t.captainName?'팀장 · '+t.captainName:'팀장 대기 중'}</div>
+        <div class="tc-pts">${fmt(t.points)}<small>P</small></div>
+      </div>
+      <div class="tc-slots">${slots.join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ─── Lot card ──────────────────────────────────────────────── */
+const DDRAGON = 'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion';
+
+function renderLot() {
+  const lot = curLot(), el = $('#lotCard');
+  if (!lot) {
+    el.className = 'lot-card empty';
+    const hint = YOU.role==='host' ? '대기열에서 매물을 선택하세요' : '진행자가 다음 매물을 준비 중입니다';
+    el.innerHTML = `<div class="eg">⚑</div><div style="font-weight:700;font-size:14px;color:var(--text)">대기 중</div><div style="font-size:12px">${hint}</div>`;
+    return;
+  }
+  el.className = 'lot-card active';
+
+  const mosts = Array.isArray(lot.mosts) ? [...lot.mosts] : [];
+  while (mosts.length < 3) mosts.push(null);
+  const champRow = mosts.map(c => c
+    ? `<img class="champ-img" src="${DDRAGON}/${c}.png" alt="${c}" onerror="this.onerror=null;this.outerHTML='<div class=\'champ-empty\'>?</div>'">`
+    : `<div class="champ-empty">?</div>`
+  ).join('');
+
+  const subPos = lot.subPos && lot.subPos !== '무관' && lot.subPos !== lot.pos ? lot.subPos : null;
+
+  el.innerHTML = `
+    <div class="lot-eyebrow">NOW ON THE BLOCK</div>
+    <div class="champ-row">${champRow}</div>
+    <div style="max-width:100%;overflow:hidden">
+      <div class="lot-nick-main">${lot.chzzk || lot.nick}</div>
+      ${lot.chzzk ? `<div class="lot-nick-sub">/ ${lot.nick}</div>` : ''}
+    </div>
+    <div class="lot-tags" style="justify-content:center;flex-wrap:wrap">
+      <span class="tag" style="color:var(--teal);border-color:rgba(45,212,191,.28)">주포 <b style="color:var(--text)">${lot.pos}</b></span>
+      ${subPos ? `<span class="tag" style="color:var(--muted)">부포 <b style="color:var(--text)">${subPos}</b></span>` : ''}
+      <span class="tag tier">${lot.tier}</span>
+      <span class="tag">Elo <b style="color:var(--text)">${lot.elo}</b></span>
+    </div>`;
+}
+
+/* ─── Bid display ───────────────────────────────────────────── */
+function renderBid() {
+  const a = $('#bidAmount'), chip = $('#leadChip');
+  if (STATE.bid.teamId) {
+    animNum(a, STATE.bid.amount);
+    const t = teamById(STATE.bid.teamId);
+    chip.classList.remove('hidden');
+    chip.style.setProperty('--lead', t.color);
+    $('#leadName').textContent = t.name;
+    chip.classList.remove('pulse'); void chip.offsetWidth; chip.classList.add('pulse');
+  } else {
+    a.textContent = '—'; a.dataset.cur = 0;
+    chip.classList.add('hidden');
+  }
+  const sb = $('#sellBtn'); if (sb) sb.disabled = !STATE.bid.teamId;
+}
+
+function animNum(el, target) {
+  const start = +(el.dataset.cur||0), t0 = performance.now(), dur = 380;
+  (function step(now) {
+    const k = Math.min(1,(now-t0)/dur), e = 1-Math.pow(1-k,3), v = Math.round(start+(target-start)*e);
+    el.innerHTML = fmt(v) + '<span class="unit">P</span>';
+    if (k < 1) requestAnimationFrame(step); else el.dataset.cur = target;
+  })(t0);
+}
+
+/* ─── Timer ─────────────────────────────────────────────────── */
+function renderTimer() {
+  if (!STATE) return;
+  const r=38, C=2*Math.PI*r;
+  const ratio = Math.max(0, STATE.timer.remaining / (STATE.timer.base||STATE.config.timer));
+  const prog = $('#timerProg');
+  prog.style.strokeDasharray = C;
+  prog.style.strokeDashoffset = C * (1 - ratio);
+  $('#timerNum').textContent = STATE.currentId ? Math.ceil(STATE.timer.remaining) : '--';
+  $('#timer').classList.toggle('warn', STATE.timer.remaining <= 5 && !!STATE.currentId);
+}
+
+/* ─── Host controls ─────────────────────────────────────────── */
+function renderHostControls() {
+  const el = $('#hostControls');
+  if (YOU.role !== 'host') { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  // Step seg
+  const base = STATE.config.step, opts = [base, base*2, base*5, base*10];
+  $('#stepSeg').innerHTML = opts.map(o => `<button class="${o===STATE.step?'on':''}" onclick="Net.send({type:'setStep',step:${o}})">+${fmt(o)}</button>`).join('');
+  // Bid grid
+  const lot = curLot();
+  $('#bidGrid').innerHTML = STATE.teams.map(t => {
+    const next = (STATE.bid.teamId ? STATE.bid.amount : 0) + STATE.step;
+    const full = t.roster.length >= STATE.config.teamSize - 1;
+    const can  = lot && !full && t.points >= next && STATE.bid.teamId !== t.id;
+    return `<button class="tbid" style="--tc:${t.color}" data-bid="${t.id}" ${can?'':'disabled'}>
+      <span class="tn"><i></i>${t.name}</span>
+      <span class="tv ${t.points<next?'low':''}">${full?'팀 완성':'입찰 '+fmt(next)+'P'}</span>
+    </button>`;
+  }).join('');
+}
+
+$('#hostControls').addEventListener('click', e => {
+  const bb = e.target.closest('[data-bid]'); if(bb) Net.send({ type:'hostBid', teamId: bb.dataset.bid });
+});
+
+/* ─── Captain controls ──────────────────────────────────────── */
+function renderCaptainControls() {
+  const el = $('#captainControls');
+  if (YOU.role !== 'captain') { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+
+  if (!YOU.teamId) {
+    el.style.setProperty('--tc', 'var(--muted)');
+    $('#capTeamLabel').innerHTML = `<i style="background:var(--muted2)"></i>팀 배정 대기 중`;
+    $('#capPts').innerHTML = '— <small>P</small>';
+    $('#bigBidBtn').disabled = true;
+    $('#bigBidBtn').firstChild.textContent = '대기 중';
+    $('#bigBidSub').textContent = '진행자가 팀을 배정할 때까지 기다리세요';
+    $('#capHint').innerHTML = '';
+    return;
+  }
+
+  const t = teamById(YOU.teamId); if (!t) return;
+  el.style.setProperty('--tc', t.color);
+
+  const lot  = curLot();
+  const next = (STATE.bid.teamId ? STATE.bid.amount : 0) + STATE.step;
+  const full = t.roster.length >= STATE.config.teamSize - 1;
+  const isLead = STATE.bid.teamId === t.id;
+  const can  = lot && !full && t.points >= next && !isLead;
+
+  $('#capTeamLabel').innerHTML = `<i style="background:${t.color}"></i>${t.name} 팀장석`;
+  $('#capPts').innerHTML = fmt(t.points) + '<small>P</small>';
+  $('#bigBidBtn').disabled = !can;
+
+  let label = '입찰', sub = `+${fmt(STATE.step)}P → ${fmt(next)}P`;
+  if (!lot)        { label = '대기 중';    sub = '진행자가 매물을 올릴 때까지 기다리세요'; }
+  else if (full)   { label = '팀 완성';   sub = '더 이상 영입할 수 없습니다'; }
+  else if (isLead) { label = '최고 입찰 중'; sub = '다른 팀이 올리면 다시 입찰하세요'; }
+  else if (t.points < next) { label = '포인트 부족'; sub = `잔여 ${fmt(t.points)}P`; }
+
+  $('#bigBidBtn').firstChild.textContent = label;
+  $('#bigBidSub').textContent = sub;
+  $('#capHint').innerHTML = STATE.bid.teamId
+    ? `현재 최고 입찰 <b>${fmt(STATE.bid.amount)}P · ${teamById(STATE.bid.teamId)?.name||''}</b>`
+    : '아직 입찰 없음';
+}
+
+/* ─── Viewer note ───────────────────────────────────────────── */
+function renderViewerNote() {
+  $('#viewerNote').classList.toggle('hidden', YOU.role !== 'viewer');
+}
+
+/* ─── Queue ─────────────────────────────────────────────────── */
+function renderQueue() {
+  const wait = STATE.pool.filter(p => p.status === 'wait');
+  $('#queueRemain').textContent = `남은 매물 ${wait.length}`;
+  const isHost = YOU.role === 'host';
+
+  // 진행자: 전체 표시 / 팀장·기타: 대기 중 매물은 ? 마스킹
+  const cards = [];
+  let maskedCount = 0;
+
+  for (const p of STATE.pool) {
+    const isLive = p.id === STATE.currentId;
+    const isWaiting = p.status === 'wait' && !isLive;
+
+    if (!isHost && isWaiting) {
+      maskedCount++;
+      continue; // 팀장 화면엔 대기 매물 개별 노출 안 함
+    }
+
+    const done = p.status !== 'wait' && !isLive;
+    let badge = '';
+    if (isLive) badge = `<div class="qbadge live">▶ 진행 중</div>`;
+    else if (p.status === 'sold') { const t=teamById(p.soldTo); badge=`<div class="qbadge sold">→ ${t?t.name:''} ${fmt(p.price)}P</div>`; }
+    else if (p.status === 'pass') badge = `<div class="qbadge pass">유찰</div>`;
+
+    cards.push(`<div class="qcard ${done?'done-q':''} ${isLive?'active-q':''} ${isHost&&p.status==='wait'?'host-q':''}"
+      ${isHost&&p.status==='wait'?`onclick="Net.send({type:'startLot',playerId:'${p.id}'})"`:''}
+      title="${isHost&&p.status==='wait'?'클릭해서 경매 시작':''}">
+      <div class="qpos">${p.pos}</div>
+      <div class="qnick">${p.nick}</div>
+      <div class="qtier">${p.tier}</div>
+      ${badge}
+    </div>`);
+  }
+
+  // 팀장 화면: 남은 매물 수만 표시
+  if (!isHost && maskedCount > 0) {
+    cards.push(`<div class="qcard" style="opacity:.45;cursor:default;border-style:dashed">
+      <div class="qpos" style="font-size:16px;color:var(--muted)">?</div>
+      <div class="qnick" style="color:var(--muted2)">대기 중</div>
+      <div class="qtier" style="color:var(--muted2)">${maskedCount}명 남음</div>
+    </div>`);
+  }
+
+  $('#queueStrip').innerHTML = cards.join('');
+}
+
+/* ─── Log ───────────────────────────────────────────────────── */
+function renderLog() {
+  const feed = $('#logFeed');
+  $('#logBadge').textContent = STATE.log.length ? `· ${STATE.log.length}` : '';
+  feed.innerHTML = [...STATE.log].reverse().map(l => {
+    const t = l.teamId ? teamById(l.teamId) : null;
+    if (l.type === 'bid') return `<div class="log-item"><span class="lt">${l.time}</span><span class="ldot" style="background:${t.color}"></span><span class="ltxt"><b>${t.name}</b> 입찰</span><span class="lamt">${fmt(l.amount)}P</span></div>`;
+    if (l.type === 'sold') return `<div class="log-item sold"><span class="ldot" style="background:${t.color}"></span><span class="ltxt"><b>${l.nick}</b> → <b style="color:${t.color}">${t.name}</b> 낙찰</span><span class="lamt">${fmt(l.amount)}P</span></div>`;
+    if (l.type === 'pass') return `<div class="log-item pass-log"><span class="lt">${l.time}</span><span class="ltxt"><b>${l.nick}</b> 유찰</span></div>`;
+    return `<div class="log-item sys"><span class="lt">${l.time}</span><span class="ltxt">${l.text}</span></div>`;
+  }).join('');
+}
+
+/* ─── Chat ──────────────────────────────────────────────────── */
+function renderChat() {
+  const feed = $('#chatFeed');
+  feed.innerHTML = STATE.chat.map(c => {
+    const rl = c.role==='host'?'진행자':c.role==='captain'?'팀장':'관전';
+    const col = c.color ? `style="color:${c.color}"` : '';
+    return `<div class="chat-msg"><b ${col}>${c.user}</b><span class="rl">${rl}</span> ${c.text}</div>`;
+  }).join('');
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function sendChat() {
+  const i = $('#chatInput'), v = i.value.trim(); if(!v) return;
+  Net.send({ type:'chat', text:v }); i.value='';
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.side-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  $('#logFeed').classList.toggle('hidden', tab!=='log');
+  $('#chatFeed').classList.toggle('hidden', tab!=='chat');
+}
+
+/* ─── Import from inhouse site ──────────────────────────────── */
+let importState = [];
+
+async function importInhouse() {
+  const url = encodeURIComponent(($('#inhouseUrl').value || '').trim() || 'http://localhost:3000');
+  const btn = $('#importBtn'), status = $('#importStatus');
+  btn.disabled = true; btn.textContent = '불러오는 중…';
+  status.style.color = 'var(--muted)'; status.textContent = '';
+  try {
+    const res = await fetch(`/api/import-inhouse?url=${url}`);
+    const data = await res.json();
+    if (!data.ok) { status.style.color = 'var(--hot)'; status.textContent = data.error; return; }
+    importState = data.players.map(p => ({ ...p, role: 'skip' }));
+    status.style.color = 'var(--teal)';
+    status.textContent = `${importState.length}명 불러옴 — 가져올 플레이어를 검색해서 선택하세요`;
+    renderImportList();
+  } catch (err) {
+    status.style.color = 'var(--hot)'; status.textContent = '연결 실패: ' + err.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '불러오기';
+  }
+}
+
+function renderImportList() {
+  const list = $('#importList'), wrap = $('#importApplyWrap'), sw = $('#importSearchWrap');
+  if (!importState.length) { list.innerHTML = ''; wrap.classList.add('hidden'); sw.style.display = 'none'; return; }
+  wrap.classList.remove('hidden'); wrap.style.display = 'flex'; sw.style.display = 'block';
+
+  const q = ($('#importSearch').value || '').trim().toLowerCase();
+  const filtered = importState
+    .map((p, i) => ({ ...p, i }))
+    .filter(p => !q || p.nick.toLowerCase().includes(q) || (p.chzzk||'').toLowerCase().includes(q) || p.tier.toLowerCase().includes(q) || p.pos.toLowerCase().includes(q));
+
+  const nPool = importState.filter(p => p.role === 'pool').length;
+  const nCap  = importState.filter(p => p.role === 'captain').length;
+  const parts = [];
+  if (nPool)  parts.push(`매물 ${nPool}명`);
+  if (nCap)   parts.push(`팀장 ${nCap}명`);
+  $('#importCount').textContent = parts.length ? parts.join(' · ') + ' 선택됨' : '선택 없음';
+  const applyBtn = $('#importApplyBtn');
+  if (applyBtn) applyBtn.textContent = parts.length ? `${parts.join(', ')} 가져오기` : '가져오기';
+
+  const ROLES = [['pool','매물'],['captain','팀장'],['skip','제외']];
+  list.innerHTML = filtered.length
+    ? filtered.map(p => `
+      <div class="srow" data-ii="${p.i}">
+        <span class="rpos">${p.pos}</span>
+        <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;overflow:hidden">
+          <span style="font-weight:700;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.chzzk || p.nick}</span>
+          ${p.chzzk ? `<span style="font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nick}</span>` : ''}
+        </div>
+        <span class="rtier" style="flex-shrink:0;margin-left:8px">${p.tier}</span>
+        <div style="display:flex;gap:3px;margin-left:8px">
+          ${ROLES.map(([r,lbl]) => `<button data-role="${r}" style="padding:3px 9px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;background:${p.role===r?(r==='captain'?'var(--teal)':r==='skip'?'var(--surface-3)':'var(--gold)'):'var(--surface-2)'};color:${p.role===r?(r==='captain'?'#031a18':r==='skip'?'var(--muted)':'#140a00'):'var(--muted2)'};border:1px solid ${p.role===r?(r==='captain'?'var(--teal)':'var(--line)'):'var(--line)'}">${lbl}</button>`).join('')}
+        </div>
+      </div>`).join('')
+    : `<div class="empty-row">"${q}"에 해당하는 플레이어가 없습니다</div>`;
+}
+
+$('#importList').addEventListener('click', e => {
+  const btn = e.target.closest('[data-role]'); if (!btn) return;
+  const row = btn.closest('[data-ii]'); if (!row) return;
+  importState[+row.dataset.ii].role = btn.dataset.role;
+  renderImportList();
+});
+
+function bulkMarkFiltered(role) {
+  const q = ($('#importSearch').value || '').trim().toLowerCase();
+  importState.forEach((p, i) => {
+    if (!q || p.nick.toLowerCase().includes(q) || (p.chzzk||'').toLowerCase().includes(q)
+            || p.tier.toLowerCase().includes(q) || p.pos.toLowerCase().includes(q)) {
+      importState[i].role = role;
+    }
+  });
+  renderImportList();
+}
+
+function applyImport() {
+  const players  = importState.filter(p => p.role === 'pool').map(({nick,pos,tier,elo}) => ({nick,pos,tier,elo}));
+  const captains = importState.filter(p => p.role === 'captain').map(p => ({ name: p.nick }));
+  if (!players.length && !captains.length) { toast('가져올 항목이 없습니다 (제외만 선택됨)'); return; }
+  Net.send({ type: 'importPlayers', players, captains });
+  const parts = [];
+  if (players.length)  parts.push(`매물 ${players.length}명`);
+  if (captains.length) parts.push(`팀장 ${captains.length}명`);
+  toast(parts.join(', ') + ' 추가됨');
+  importState = [];
+  renderImportList();
+  $('#importStatus').textContent = '완료! 설정 패널에서 확인하세요.';
+}
+
+/* ─── Setup view (host) ──────────────────────────────────────── */
+function applyConfig() {
+  Net.send({ type:'setConfig', config:{
+    room: $('#cfgRoom').value||'경매내전',
+    points: +$('#cfgPoints').value||1000,
+    step: +$('#cfgStep').value||50,
+    timer: +$('#cfgTimer').value||30,
+    addTime: +$('#cfgAdd').value||5,
+    teamSize: +$('#cfgSize').value||5,
+  }});
+  toast('설정이 적용됐습니다');
+}
+
+function renderSetup() {
+  if (!STATE) return;
+  $('#cfgRoom').value = STATE.config.room;
+  $('#cfgPoints').value = STATE.config.points;
+  $('#cfgStep').value = STATE.config.step;
+  $('#cfgTimer').value = STATE.config.timer;
+  $('#cfgAdd').value = STATE.config.addTime;
+  $('#cfgSize').value = STATE.config.teamSize;
+
+  const pending = STATE.pendingCaptains || [];
+  $('#capWaitCount').textContent = `· ${pending.length}명`;
+  $('#capWaitList').innerHTML = pending.length
+    ? pending.map(c => `
+      <div class="srow">
+        <span class="rnick">${c.name}</span>
+        <select onchange="assignCaptain('${c.id}',this.value)" style="margin-left:auto;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:5px 10px;font-size:12px;color:var(--text);outline:none">
+          <option value="">팀 배정…</option>
+          ${STATE.teams.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}
+        </select>
+      </div>`).join('')
+    : `<div class="empty-row">입장한 팀장이 없습니다</div>`;
+
+  $('#capCount').textContent = `· ${STATE.teams.length}팀`;
+  $('#capList').innerHTML = STATE.teams.map(t => `
+    <div class="srow">
+      <span class="rcol" style="background:${t.color}"></span>
+      <span class="rnick">${t.name}</span>
+      <span class="rtier" style="color:var(--muted2)">${t.captainName?'팀장: '+t.captainName:'팀장 미배정'}</span>
+      <button class="del" onclick="Net.send({type:'delTeam',teamId:'${t.id}'})">✕</button>
+    </div>`).join('') || `<div class="empty-row">팀을 추가하세요</div>`;
+
+  $('#poolCount').textContent = `· ${STATE.pool.length}명`;
+  $('#poolList').innerHTML = STATE.pool.map(p => `
+    <div class="srow">
+      <span class="rpos">${p.pos}</span>
+      <span class="rnick">${p.nick}</span>
+      <span class="rtier">${p.tier} · ${p.elo}</span>
+      <button class="del" onclick="Net.send({type:'delPlayer',playerId:'${p.id}'})">✕</button>
+    </div>`).join('') || `<div class="empty-row">매물을 추가하세요</div>`;
+}
+
+function assignCaptain(captainId, teamId) {
+  if (!teamId) return;
+  Net.send({ type:'assignCaptain', captainId, teamId });
+}
+function addPlayer() {
+  const nick = $('#addNick').value.trim(); if(!nick) return;
+  Net.send({ type:'addPlayer', nick, pos:$('#addPos').value, tier:$('#addTier').value.trim(), elo:+$('#addElo').value });
+  $('#addNick').value=''; $('#addTier').value=''; $('#addElo').value='';
+}
+
+/* ─── Result view ───────────────────────────────────────────── */
+function renderResult() {
+  if (!STATE) return;
+  const POS = {TOP:0,JG:1,MID:2,ADC:3,SUP:4};
+  $('#resultGrid').innerHTML = STATE.teams.map(t => {
+    const rows = [...t.roster].sort((a,b)=>(POS[a.pos]??9)-(POS[b.pos]??9)).map(m =>
+      `<div class="rrow"><span class="rpos" style="--tc:${t.color}">${m.pos}</span><span class="rnk">${m.nick}</span><span class="rpr">${fmt(m.price)}P</span></div>`
+    ).join('');
+    const capRow = t.captainName ? `<div class="rrow"><span class="rpos" style="--tc:${t.color}">CAP</span><span class="rnk">${t.captainName}</span><span class="rpr" style="color:var(--muted)">팀장</span></div>` : '';
+    return `<div class="rteam" style="--tc:${t.color}">
+      <div class="rhead">
+        <div class="rt"><i></i>${t.name}</div>
+        <div class="rp"><div class="rpv">${fmt(t.points)}</div><div class="rpl">잔여 포인트</div></div>
+      </div>
+      ${capRow}${rows}
+    </div>`;
+  }).join('') || '<div style="color:var(--muted);padding:40px;text-align:center">결과 없음</div>';
+
+  const seeded = [...STATE.teams].sort((a,b) => b.points - a.points);
+  const rows = [];
+  for (let i=0;i<seeded.length;i+=2) {
+    const a=seeded[i], b=seeded[i+1];
+    rows.push(`<div class="match-row">
+      <span class="seed">SEED ${i+1}</span>
+      <span class="mside"><i style="background:${a.color}"></i>${a.name} <span style="color:var(--muted);font-family:var(--fm);font-size:11px">${fmt(a.points)}P</span></span>
+      <span class="vs">VS</span>
+      ${b?`<span class="mside"><i style="background:${b.color}"></i>${b.name} <span style="color:var(--muted);font-family:var(--fm);font-size:11px">${fmt(b.points)}P</span></span>`:`<span style="color:var(--muted)">부전승</span>`}
+    </div>`);
+  }
+  $('#bracket').innerHTML = rows.join('') || '<div style="color:var(--muted);padding:20px;text-align:center">팀 2개 이상 필요</div>';
+}
+
+/* ─── Toast ─────────────────────────────────────────────────── */
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* ─── Init ──────────────────────────────────────────────────── */
+if (ROOM_ID) Net.connect();
+</script>
+</body>
+</html>
