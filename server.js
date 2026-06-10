@@ -37,6 +37,21 @@ app.get('/api/import-inhouse', async (req, res) => {
     if (!r.ok) return res.status(502).json({ ok: false, error: `내전사이트 응답 오류 (${r.status})` });
     const db = await r.json();
     const viewers = Array.isArray(db.viewers) ? db.viewers : [];
+
+    // 채팅 투표 현황 (없거나 실패해도 무시 — 구버전 내전사이트 호환)
+    let vote = null;
+    try {
+      const vr = await fetch(`${base}/api/vote-state`, { signal: AbortSignal.timeout(5000) });
+      if (vr.ok) {
+        const vd = await vr.json();
+        if (vd.ok) vote = vd.vote;
+      }
+    } catch {}
+    const votedNames = new Set();
+    if (vote && Array.isArray(vote.items)) {
+      for (const it of vote.items) for (const n of (it.votes || [])) votedNames.add(String(n).trim());
+    }
+
     const TIER_ELO = {
       IR4:600,IR3:613,IR2:626,IR1:639, BR4:660,BR3:673,BR2:686,BR1:699,
       SI4:720,SI3:737,SI2:754,SI1:771, GO4:800,GO3:817,GO2:834,GO1:851,
@@ -53,13 +68,18 @@ app.get('/api/import-inhouse', async (req, res) => {
       const tierKey = String(v.tier || '');
       let elo = TIER_ELO[tierKey] || 0;
       if (!elo && tierKey.startsWith('MS')) elo = 1500 + (parseInt(tierKey.slice(2)) || 0);
+      const voted = votedNames.has(String(v.chzzk || '').trim()) || votedNames.has(String(v.name || '').trim());
       return {
         nick: v.name, chzzk: v.chzzk || '', pos, subPos,
         tier: tierKey || '언랭', elo,
         mosts: Array.isArray(v.mosts) ? v.mosts.slice(0, 3) : [],
+        voted,
       };
     });
-    res.json({ ok: true, players, total: viewers.length });
+    res.json({
+      ok: true, players, total: viewers.length,
+      vote: vote ? { active: !!vote.active, title: vote.title || '', voterCount: votedNames.size } : null,
+    });
   } catch (err) {
     res.status(502).json({ ok: false, error: '연결 실패: ' + err.message });
   }

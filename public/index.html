@@ -447,6 +447,9 @@ ul{list-style:none}
             </div>
             <div id="importSearchWrap" style="display:none;padding:8px 14px;border-top:1px solid var(--line)">
               <input id="importSearch" placeholder="닉네임 / 티어 / 포지션 검색…" oninput="renderImportList()" style="width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:12.5px;outline:none;color:var(--text)"/>
+              <label id="importVoteFilterWrap" style="display:none;align-items:center;gap:6px;margin-top:7px;font-size:11.5px;color:var(--muted);cursor:pointer">
+                <input type="checkbox" id="importVotedOnly" onchange="renderImportList()"/> 투표 참여자만 표시
+              </label>
             </div>
             <div class="row-list" id="importList" style="max-height:240px"></div>
             <div id="importApplyWrap" class="hidden" style="padding:10px 14px;border-top:1px solid var(--line);flex-direction:column;gap:7px">
@@ -1064,9 +1067,18 @@ async function importInhouse() {
     const res = await fetch(`/api/import-inhouse?url=${url}`);
     const data = await res.json();
     if (!data.ok) { status.style.color = 'var(--hot)'; status.textContent = data.error; return; }
-    importState = data.players.map(p => ({ ...p, role: 'skip' }));
+    const vote = data.vote;
+    // 투표가 진행 중이면 투표 참여자를 매물로 자동 선택 (수동으로 변경 가능)
+    importState = data.players.map(p => ({ ...p, role: (vote && vote.active && p.voted) ? 'pool' : 'skip' }));
     status.style.color = 'var(--teal)';
-    status.textContent = `${importState.length}명 불러옴 — 가져올 플레이어를 검색해서 선택하세요`;
+    if (vote && vote.active) {
+      status.textContent = `${importState.length}명 불러옴 · "${vote.title}" 투표 참여자 ${vote.voterCount}명을 매물로 선택했습니다 — 빠지거나 잘못 선택된 인원은 직접 수정하세요`;
+      $('#importVotedOnly').checked = true;
+    } else {
+      status.textContent = `${importState.length}명 불러옴 — 가져올 플레이어를 검색해서 선택하세요`;
+      $('#importVotedOnly').checked = false;
+    }
+    $('#importVoteFilterWrap').style.display = (vote && vote.voterCount > 0) ? 'flex' : 'none';
     renderImportList();
   } catch (err) {
     status.style.color = 'var(--hot)'; status.textContent = '연결 실패: ' + err.message;
@@ -1081,8 +1093,10 @@ function renderImportList() {
   wrap.classList.remove('hidden'); wrap.style.display = 'flex'; sw.style.display = 'block';
 
   const q = ($('#importSearch').value || '').trim().toLowerCase();
+  const votedOnly = $('#importVotedOnly').checked;
   const filtered = importState
     .map((p, i) => ({ ...p, i }))
+    .filter(p => !votedOnly || p.voted)
     .filter(p => !q || p.nick.toLowerCase().includes(q) || (p.chzzk||'').toLowerCase().includes(q) || p.tier.toLowerCase().includes(q) || p.pos.toLowerCase().includes(q));
 
   const nPool = importState.filter(p => p.role === 'pool').length;
@@ -1103,6 +1117,7 @@ function renderImportList() {
           <span style="font-weight:700;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.chzzk || p.nick}</span>
           ${p.chzzk ? `<span style="font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nick}</span>` : ''}
         </div>
+        ${p.voted ? `<span style="flex-shrink:0;font-size:10px;font-weight:800;color:var(--teal);background:rgba(15,169,142,.12);border:1px solid rgba(15,169,142,.3);border-radius:6px;padding:2px 6px;margin-left:6px">투표✓</span>` : ''}
         <span class="rtier" style="flex-shrink:0;margin-left:8px">${p.tier}</span>
         <div style="display:flex;gap:3px;margin-left:8px">
           ${ROLES.map(([r,lbl]) => `<button data-role="${r}" style="padding:3px 9px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;background:${p.role===r?(r==='captain'?'var(--teal)':r==='skip'?'var(--surface-3)':'var(--gold)'):'var(--surface-2)'};color:${p.role===r?(r==='captain'?'#FFFFFF':r==='skip'?'var(--muted)':'#221A3F'):'var(--muted2)'};border:1px solid ${p.role===r?(r==='captain'?'var(--teal)':'var(--line)'):'var(--line)'}">${lbl}</button>`).join('')}
