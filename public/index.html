@@ -343,6 +343,7 @@ ul{list-style:none}
     <h1>BID<span>RIFT</span></h1>
     <p class="lsub">20인 경매내전 실시간 플랫폼<br>방을 만들고 팀장들에게 링크 하나만 공유하면 끝</p>
     <button class="create-btn" id="createBtn">방 만들기</button>
+    <button class="create-btn" id="demoBtn" style="margin-top:12px;background:var(--surface);color:var(--text);box-shadow:6px 6px 0 var(--muted2)">🔴 라이브 데모 보기</button>
     <p class="land-note">방을 만들면 고유한 1회용 URL이 생성됩니다</p>
   </div>
 </div>
@@ -610,6 +611,8 @@ $('#createBtn').addEventListener('click', async () => {
     }
   } catch { btn.disabled = false; btn.textContent = '방 만들기'; }
 });
+
+$('#demoBtn').addEventListener('click', () => { location.href = '/?room=DEMO01'; });
 
 /* ─── Network ───────────────────────────────────────────────── */
 const Net = {

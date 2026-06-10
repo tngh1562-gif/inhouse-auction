@@ -106,6 +106,16 @@ wss.on('connection', ws => {
       const r = rooms.get((msg.roomId || '').toUpperCase());
       if (!r) { send(ws, { type:'error', msg:'방을 찾을 수 없습니다. URL을 확인하세요.' }); return; }
       room = r;
+
+      // 라이브 데모 방: 역할 선택 없이 바로 관전자로 입장
+      if (room.demo) {
+        me = { role:'viewer', pendingHost:false, teamId:null, name:'관전자', id: genId(8) };
+        room.clients.set(ws, me);
+        send(ws, { type:'state', state: toState(room) });
+        send(ws, { type:'welcome', you:{ role:'viewer', teamId:null, id:me.id } });
+        return;
+      }
+
       const isHost = msg.hostToken && msg.hostToken === room.hostToken;
       me = { role: 'pending', pendingHost: isHost, teamId: null, name: '', id: genId(8) };
       room.clients.set(ws, me);
@@ -397,6 +407,7 @@ function advanceLot(room) {
     pushLog(room, { type:'sys', text:'<b>경매 종료!</b> 최종 팀 구성을 확인하세요.' });
     broadcast(room, { type:'state', state:toState(room) });
     broadcast(room, { type:'toast', msg:'경매 종료! 결과 탭을 확인하세요 🏆' });
+    if (room.demo) setTimeout(() => resetDemo(room), 15000);
   }
 }
 
@@ -443,9 +454,85 @@ function toState(room) {
   };
 }
 
-function send(ws, obj)          { if (ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+function send(ws, obj)          { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
 function broadcast(room, obj)   { const d = JSON.stringify(obj); for (const [ws] of room.clients) send(ws, JSON.parse(d)); }
 
+/* ─── Live demo room ───────────────────────────────────────── */
+const DEMO_CHAMPS = ['Ahri','Yasuo','Jinx','Lux','Garen','Darius','Leona','Riven','Zed','Vayne','Ezreal','Thresh','Annie','Ashe','Lulu','Nasus','Sona','Talon','Vi','Xayah'];
+const DEMO_TIERS  = [['CH',2300],['GM',2100],['DI1',1197],['DI3',1119],['EM2',1004],['PL1',926],['PL3',892],['GO2',834],['GO4',800],['SI2',754],['SI4',720],['BR2',686]];
+const DEMO_NAMES  = [
+  ['몰루겐','Molgen'],['피넛불주먹','PeanutPunch'],['고요속외침','SilentScream'],['우유한잔','MilkCarton'],
+  ['정글동선','JungleRoute'],['칼퇴를위해','EarlyLeave'],['빛돌이','LightBoy'],['새벽감성','DawnVibe'],
+  ['무지개반사','RainbowFlex'],['한타장인','TeamfightPro'],['라인전귀신','LaneGhost'],['서폿하는남자','SupportGuy'],
+  ['원딜의품격','ADCKing'],['미드라이너','MidLaner'],['정글차이','JglDiff'],['탑신병자','TopCrazy'],
+  ['칼바람단골','ARAMRegular'],['솔랭귀신','SoloQGhost'],['데미지딜러','DmgDealer'],['막타장인','LastHitMaster'],
+];
+
+function createDemoRoom() {
+  const room = createRoom('DEMO01', '');
+  room.demo = true;
+  room.config = { room: 'BIDRIFT 라이브 데모', points: 1000, step: 50, timer: 12, addTime: 2, teamSize: 5 };
+  room.step = room.config.step;
+
+  const POS5 = ['TOP','JG','MID','ADC','SUP'];
+  room.pool = DEMO_NAMES.map(([chzzk, nick], i) => {
+    const pos = POS5[Math.floor(i / 4)];
+    const subPos = POS5[(Math.floor(i / 4) + 1) % 5];
+    const [tier, elo] = DEMO_TIERS[i % DEMO_TIERS.length];
+    return {
+      id: 'demo' + i,
+      nick, chzzk, pos, subPos, tier, elo,
+      mosts: [DEMO_CHAMPS[i % 20], DEMO_CHAMPS[(i + 3) % 20], DEMO_CHAMPS[(i + 7) % 20]],
+      status: 'wait', soldTo: null, price: 0,
+    };
+  });
+
+  room.teams.forEach((t, i) => { t.captainName = `데모팀장${i + 1}`; t.points = room.config.points; });
+  room.phase = 'auction';
+  pushLog(room, { type:'sys', text:'<b>라이브 데모 경매가 진행 중입니다.</b>' });
+  return room;
+}
+
+function pickNextLot(room, delay) {
+  const wait = room.pool.filter(p => p.status === 'wait');
+  if (!wait.length) return;
+  const next = wait[Math.floor(Math.random() * wait.length)];
+  setTimeout(() => startLot(room, next.id), delay);
+}
+
+function botTick(room) {
+  if (room.phase !== 'auction' || !room.currentId) return;
+  const next = (room.bid.teamId ? room.bid.amount : 0) + room.step;
+  const candidates = room.teams.filter(t =>
+    t.id !== room.bid.teamId &&
+    t.roster.length < room.config.teamSize - 1 &&
+    t.points >= next
+  );
+  if (!candidates.length || Math.random() < 0.45) return;
+  const team = candidates[Math.floor(Math.random() * candidates.length)];
+  doBid(room, team.id, null);
+}
+
+function resetDemo(room) {
+  room.pool.forEach(p => { p.status = 'wait'; p.soldTo = null; p.price = 0; });
+  room.teams.forEach(t => { t.roster = []; t.points = room.config.points; });
+  room.currentId = null;
+  room.bid = { amount:0, teamId:null, history:[] };
+  room.phase = 'auction';
+  pushLog(room, { type:'sys', text:'<b>라이브 데모 경매를 다시 시작합니다.</b>' });
+  broadcast(room, { type:'state', state: toState(room) });
+  pickNextLot(room, 1500);
+}
+
+function startDemoLoop(room) {
+  pickNextLot(room, 800);
+  room.botRef = setInterval(() => botTick(room), 1100);
+}
+
 /* ─── Start ────────────────────────────────────────────────── */
+const demoRoom = createDemoRoom();
+rooms.set(demoRoom.roomId, demoRoom);
+startDemoLoop(demoRoom);
+
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => console.log(`[AUCTION] http://localhost:${PORT}`));
