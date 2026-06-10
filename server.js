@@ -459,7 +459,7 @@ function broadcast(room, obj)   { const d = JSON.stringify(obj); for (const [ws]
 
 /* ─── Live demo room ───────────────────────────────────────── */
 const DEMO_CHAMPS = ['Ahri','Yasuo','Jinx','Lux','Garen','Darius','Leona','Riven','Zed','Vayne','Ezreal','Thresh','Annie','Ashe','Lulu','Nasus','Sona','Talon','Vi','Xayah'];
-const DEMO_TIERS  = [['CH',2300],['GM',2100],['DI1',1197],['DI3',1119],['EM2',1004],['PL1',926],['PL3',892],['GO2',834],['GO4',800],['SI2',754],['SI4',720],['BR2',686]];
+const DEMO_TIERS  = [['Challenger',2300],['Grandmaster',2100],['Diamond 1',1197],['Diamond 3',1119],['Emerald 2',1004],['Platinum 1',926],['Platinum 3',892],['Gold 2',834],['Gold 4',800],['Silver 2',754],['Silver 4',720],['Bronze 2',686]];
 const DEMO_NAMES  = [
   ['몰루겐','Molgen'],['피넛불주먹','PeanutPunch'],['고요속외침','SilentScream'],['우유한잔','MilkCarton'],
   ['정글동선','JungleRoute'],['칼퇴를위해','EarlyLeave'],['빛돌이','LightBoy'],['새벽감성','DawnVibe'],

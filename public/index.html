@@ -873,7 +873,6 @@ function renderLot() {
       <span class="tag" style="color:var(--teal);border-color:rgba(15,169,142,.28)">주포 <b style="color:var(--text)">${lot.pos}</b></span>
       ${subPos ? `<span class="tag" style="color:var(--muted)">부포 <b style="color:var(--text)">${subPos}</b></span>` : ''}
       <span class="tag tier">${lot.tier}</span>
-      <span class="tag">Elo <b style="color:var(--text)">${lot.elo}</b></span>
     </div>`;
 }
 
@@ -1193,7 +1192,7 @@ function renderSetup() {
     <div class="srow">
       <span class="rpos">${p.pos}</span>
       <span class="rnick">${p.nick}</span>
-      <span class="rtier">${p.tier} · ${p.elo}</span>
+      <span class="rtier">${p.tier}</span>
       <button class="del" onclick="Net.send({type:'delPlayer',playerId:'${p.id}'})">✕</button>
     </div>`).join('') || `<div class="empty-row">매물을 추가하세요</div>`;
 }
