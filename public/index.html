@@ -1072,7 +1072,7 @@ async function importInhouse() {
     importState = data.players.map(p => ({ ...p, role: (vote && vote.active && p.voted) ? 'pool' : 'skip' }));
     status.style.color = 'var(--teal)';
     if (vote && vote.active) {
-      status.textContent = `${importState.length}명 불러옴 · "${vote.title}" 투표 참여자 ${vote.voterCount}명을 매물로 선택했습니다 — 빠지거나 잘못 선택된 인원은 직접 수정하세요`;
+      status.textContent = `${importState.length}명 불러옴 · "${vote.title}" - "${vote.itemLabel}"(!투표1)에 투표한 ${vote.voterCount}명을 매물로 선택했습니다 — 빠지거나 잘못 선택된 인원은 직접 수정하세요`;
       $('#importVotedOnly').checked = true;
     } else {
       status.textContent = `${importState.length}명 불러옴 — 가져올 플레이어를 검색해서 선택하세요`;

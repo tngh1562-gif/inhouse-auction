@@ -47,10 +47,10 @@ app.get('/api/import-inhouse', async (req, res) => {
         if (vd.ok) vote = vd.vote;
       }
     } catch {}
+    // !투표1 (첫 번째 항목)에 투표한 사람만 대상으로 함
+    const voteItem = vote && Array.isArray(vote.items) ? vote.items[0] : null;
     const votedNames = new Set();
-    if (vote && Array.isArray(vote.items)) {
-      for (const it of vote.items) for (const n of (it.votes || [])) votedNames.add(String(n).trim());
-    }
+    if (voteItem) for (const n of (voteItem.votes || [])) votedNames.add(String(n).trim());
 
     const TIER_ELO = {
       IR4:600,IR3:613,IR2:626,IR1:639, BR4:660,BR3:673,BR2:686,BR1:699,
@@ -78,7 +78,7 @@ app.get('/api/import-inhouse', async (req, res) => {
     });
     res.json({
       ok: true, players, total: viewers.length,
-      vote: vote ? { active: !!vote.active, title: vote.title || '', voterCount: votedNames.size } : null,
+      vote: voteItem ? { active: !!vote.active, title: vote.title || '', itemLabel: voteItem.label || '', voterCount: votedNames.size } : null,
     });
   } catch (err) {
     res.status(502).json({ ok: false, error: '연결 실패: ' + err.message });
