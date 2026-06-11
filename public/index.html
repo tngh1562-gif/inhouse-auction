@@ -117,15 +117,17 @@ ul{list-style:none}
 .lot-nick-sub{font-size:18px;color:var(--muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;font-weight:700}
 
 /* Bid display */
-.bid-display{background:var(--surface);border:2.5px solid var(--line);border-radius:var(--r-lg);padding:13px 14px;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;height:100%;position:relative;box-shadow:var(--sh-lg);overflow:hidden}
+.bid-display{background:var(--surface);border:2.5px solid var(--line);border-radius:var(--r-lg);padding:13px 14px;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;height:100%;position:relative;box-shadow:var(--sh-lg);overflow:hidden;transition:.2s}
+.bid-display.has-bid{border-color:var(--lead);box-shadow:6px 6px 0 var(--lead)}
 .bid-display::before{content:'';position:absolute;top:0;left:0;right:0;height:8px;background:repeating-linear-gradient(-45deg,var(--yel) 0 10px,var(--line) 10px 20px);border-bottom:2px solid var(--line)}
 .bd-label{font-size:10px;letter-spacing:1.8px;color:var(--muted);text-transform:uppercase;font-weight:900;margin-top:6px}
 .bid-amount{font-family:var(--fm);font-weight:800;font-size:34px;font-variant-numeric:tabular-nums;line-height:1;color:var(--line);background:linear-gradient(transparent 55%,var(--yel) 55% 92%,transparent 92%);padding:0 4px}
 .bid-amount .unit{font-size:14px;color:var(--gold-d);margin-left:3px}
-.lead-chip{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:900;padding:4px 11px;border-radius:999px;background:#FFF;color:var(--lead,var(--muted));border:2px solid var(--lead,var(--muted2));transition:.2s;box-shadow:2px 2px 0 var(--lead,var(--muted2))}
+.lead-chip{display:flex;align-items:center;gap:7px;font-size:15px;font-weight:900;padding:6px 16px 6px 12px;border-radius:999px;background:var(--lead,var(--muted));color:#FFF;border:2.5px solid var(--line);transition:.2s;box-shadow:3px 3px 0 var(--line)}
 .lead-chip.pulse{animation:chip .9s ease}
-@keyframes chip{0%{transform:scale(1)}35%{transform:scale(1.12)}100%{transform:scale(1)}}
-.lead-chip .ld{width:8px;height:8px;border-radius:50%;background:currentColor}
+@keyframes chip{0%{transform:scale(1)}35%{transform:scale(1.18)}100%{transform:scale(1)}}
+.lead-chip .ld{width:9px;height:9px;border-radius:50%;background:#FFF;box-shadow:0 0 0 2px rgb(255 255 255 / .35)}
+.lead-chip .lc-label{font-size:10px;letter-spacing:1px;font-weight:800;opacity:.75;text-transform:uppercase}
 .timer{position:relative;width:90px;height:90px;margin-top:4px}
 .timer svg{transform:rotate(-90deg)}
 .timer .t-track{fill:none;stroke:var(--line-s);stroke-width:8}
@@ -506,10 +508,10 @@ ul{list-style:none}
               <div class="eg">⚑</div>
               <div style="font-weight:700;font-size:14px;color:var(--text)">대기 중</div>
             </div>
-            <div class="bid-display">
+            <div class="bid-display" id="bidDisplay">
               <div class="bd-label">현재 최고 입찰</div>
               <div class="bid-amount" id="bidAmount">—</div>
-              <div class="lead-chip hidden" id="leadChip"><span class="ld"></span><span id="leadName">-</span></div>
+              <div class="lead-chip hidden" id="leadChip"><span class="ld"></span><span class="lc-label">입찰팀</span><span id="leadName">-</span></div>
               <div class="timer" id="timer">
                 <svg width="90" height="90" viewBox="0 0 90 90">
                   <defs><linearGradient id="tgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3A86FF"/><stop offset="100%" stop-color="#0FA98E"/></linearGradient></defs>
@@ -884,17 +886,19 @@ function renderLot() {
 
 /* ─── Bid display ───────────────────────────────────────────── */
 function renderBid() {
-  const a = $('#bidAmount'), chip = $('#leadChip');
+  const a = $('#bidAmount'), chip = $('#leadChip'), display = $('#bidDisplay');
   if (STATE.bid.teamId) {
     animNum(a, STATE.bid.amount);
     const t = teamById(STATE.bid.teamId);
     chip.classList.remove('hidden');
-    chip.style.setProperty('--lead', t.color);
+    display.classList.add('has-bid');
+    display.style.setProperty('--lead', t.color);
     $('#leadName').textContent = t.name;
     chip.classList.remove('pulse'); void chip.offsetWidth; chip.classList.add('pulse');
   } else {
     a.textContent = '—'; a.dataset.cur = 0;
     chip.classList.add('hidden');
+    display.classList.remove('has-bid');
   }
   const sb = $('#sellBtn'); if (sb) sb.disabled = !STATE.bid.teamId;
 }
