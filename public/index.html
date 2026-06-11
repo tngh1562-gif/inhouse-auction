@@ -572,7 +572,10 @@ ul{list-style:none}
   <!-- RESULT -->
   <div class="hidden" id="view-result" style="height:calc(100vh - 52px)">
     <div class="result-view">
-      <div class="sec-title"><h2>최종 팀 구성</h2><span class="line"></span></div>
+      <div class="sec-title">
+        <h2>최종 팀 구성</h2><span class="line"></span>
+        <button id="discordMoveBtn" class="btn ghost hidden" style="flex:0 0 auto" onclick="moveDiscordTeams()">🔊 디스코드 이동+역할 부여</button>
+      </div>
       <div class="result-grid" id="resultGrid"></div>
       <div class="sec-title" style="margin-top:8px"><h2>대진 선택권</h2><span class="line"></span></div>
       <div class="matchup-grid" id="bracket"></div>
@@ -1225,6 +1228,7 @@ function addPlayer() {
 /* ─── Result view ───────────────────────────────────────────── */
 function renderResult() {
   if (!STATE) return;
+  $('#discordMoveBtn').classList.toggle('hidden', YOU.role !== 'host');
   const POS = {TOP:0,JG:1,MID:2,ADC:3,SUP:4};
   $('#resultGrid').innerHTML = STATE.teams.map(t => {
     const rows = [...t.roster].sort((a,b)=>(POS[a.pos]??9)-(POS[b.pos]??9)).map(m =>
@@ -1252,6 +1256,12 @@ function renderResult() {
     </div>`);
   }
   $('#bracket').innerHTML = rows.join('') || '<div style="color:var(--muted);padding:20px;text-align:center">팀 2개 이상 필요</div>';
+}
+
+function moveDiscordTeams() {
+  const inhouseUrl = ($('#inhouseUrl').value || '').trim() || 'http://localhost:3000';
+  Net.send({ type:'moveDiscordTeams', inhouseUrl });
+  toast('디스코드 이동 요청을 보냈습니다…');
 }
 
 /* ─── Toast ─────────────────────────────────────────────────── */

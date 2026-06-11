@@ -73,7 +73,7 @@ app.get('/api/import-inhouse', async (req, res) => {
         nick: v.name, chzzk: v.chzzk || '', pos, subPos,
         tier: tierKey || '언랭', elo,
         mosts: Array.isArray(v.mosts) ? v.mosts.slice(0, 3) : [],
-        voted,
+        voted, discordId: String(v.discordId || '').replace(/\D/g, ''),
       };
     });
     res.json({
@@ -241,6 +241,7 @@ wss.on('connection', ws => {
           tier: String(p.tier || '').slice(0, 12) || '언랭',
           elo: +p.elo || 0,
           mosts: Array.isArray(p.mosts) ? p.mosts.slice(0, 3).map(m => String(m).slice(0, 30)) : [],
+          discordId: String(p.discordId || '').replace(/\D/g, ''),
           status: 'wait', soldTo: null, price: 0,
         });
         added++;
@@ -330,6 +331,40 @@ wss.on('connection', ws => {
       return;
     }
 
+    /* ── host: result screen - 디스코드 음성 이동 + 역할 부여 ── */
+    if (msg.type === 'moveDiscordTeams') {
+      if (me.role !== 'host' || room.phase !== 'ended') return;
+      const base = String(msg.inhouseUrl || '').trim().replace(/\/+$/, '') || 'http://localhost:3000';
+      const teams = room.teams.map(t => ({
+        name: t.name,
+        discordIds: t.roster.map(p => p.discordId).filter(Boolean),
+      }));
+      if (!teams.some(t => t.discordIds.length)) {
+        send(ws, { type:'toast', msg:'디스코드 연동된 팀원이 없습니다' });
+        return;
+      }
+      (async () => {
+        try {
+          const r = await fetch(`${base}/api/auction-move-voice-teams`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ teams }),
+            signal: AbortSignal.timeout(15000),
+          });
+          const data = await r.json();
+          if (data.ok) {
+            const movedTotal = Object.values(data.moved || {}).reduce((a,b) => a + (+b || 0), 0);
+            broadcast(room, { type:'toast', msg:`🔊 디스코드 이동 완료 (${movedTotal}명)` });
+          } else {
+            send(ws, { type:'toast', msg:'디스코드 이동 실패: ' + (data.error || '알 수 없는 오류') });
+          }
+        } catch (err) {
+          send(ws, { type:'toast', msg:'디스코드 이동 실패: ' + err.message });
+        }
+      })();
+      return;
+    }
+
     /* ── captain: bid ── */
     if (msg.type === 'bid') {
       if (me.role !== 'captain' || room.phase !== 'auction') return;
@@ -396,7 +431,7 @@ function sellLot(room) {
   stopTimer(room);
   const team = room.teams.find(t => t.id === room.bid.teamId);
   team.points -= room.bid.amount;
-  team.roster.push({ nick:lot.nick, pos:lot.pos, tier:lot.tier, elo:lot.elo, price:room.bid.amount });
+  team.roster.push({ nick:lot.nick, pos:lot.pos, tier:lot.tier, elo:lot.elo, price:room.bid.amount, discordId:lot.discordId || '' });
   team.roster.sort((a,b) => (POS_ORDER[a.pos]??9) - (POS_ORDER[b.pos]??9));
   lot.status = 'sold'; lot.soldTo = team.id; lot.price = room.bid.amount;
   pushLog(room, { type:'sold', teamId:team.id, nick:lot.nick, amount:room.bid.amount });
