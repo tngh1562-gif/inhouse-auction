@@ -809,6 +809,16 @@ function renderAll() {
 function teamById(id) { return STATE && STATE.teams.find(t=>t.id===id); }
 function curLot()     { return STATE && STATE.pool.find(p=>p.id===STATE.currentId); }
 
+const TIER_LETTER = { IR:'I', BR:'B', SI:'S', GO:'G', PL:'P', EM:'E', DI:'D', GM:'GM', CH:'C' };
+function tierLabel(tier) {
+  const t = String(tier || '');
+  const m = t.match(/^(IR|BR|SI|GO|PL|EM|DI)([1-4])$/);
+  if (m) return TIER_LETTER[m[1]] + m[2];
+  if (/^MS\d*$/.test(t)) return 'M';
+  if (TIER_LETTER[t]) return TIER_LETTER[t];
+  return t;
+}
+
 /* ─── Team rail ─────────────────────────────────────────────── */
 function renderTeamRail() {
   if (!STATE) return;
@@ -880,7 +890,7 @@ function renderLot() {
     <div class="lot-tags" style="justify-content:center;flex-wrap:wrap">
       <span class="tag" style="color:var(--teal);border-color:rgba(15,169,142,.28)">주포 <b style="color:var(--text)">${lot.pos}</b></span>
       ${subPos ? `<span class="tag" style="color:var(--muted)">부포 <b style="color:var(--text)">${subPos}</b></span>` : ''}
-      <span class="tag tier">${lot.tier}</span>
+      <span class="tag tier">${tierLabel(lot.tier)}</span>
     </div>`;
 }
 
@@ -1009,7 +1019,7 @@ function renderQueue() {
       title="${isHost&&p.status==='wait'?'클릭해서 경매 시작':''}">
       <div class="qpos">${p.pos}</div>
       <div class="qnick">${p.nick}</div>
-      <div class="qtier">${p.tier}</div>
+      <div class="qtier">${tierLabel(p.tier)}</div>
       ${badge}
     </div>`);
   }
@@ -1125,7 +1135,7 @@ function renderImportList() {
           ${p.chzzk ? `<span style="font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nick}</span>` : ''}
         </div>
         ${p.voted ? `<span style="flex-shrink:0;font-size:10px;font-weight:800;color:var(--teal);background:rgba(15,169,142,.12);border:1px solid rgba(15,169,142,.3);border-radius:6px;padding:2px 6px;margin-left:6px">투표✓</span>` : ''}
-        <span class="rtier" style="flex-shrink:0;margin-left:8px">${p.tier}</span>
+        <span class="rtier" style="flex-shrink:0;margin-left:8px">${tierLabel(p.tier)}</span>
         <div style="display:flex;gap:3px;margin-left:8px">
           ${ROLES.map(([r,lbl]) => `<button data-role="${r}" style="padding:3px 9px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;background:${p.role===r?(r==='captain'?'var(--teal)':r==='skip'?'var(--surface-3)':'var(--gold)'):'var(--surface-2)'};color:${p.role===r?(r==='captain'?'#FFFFFF':r==='skip'?'var(--muted)':'#221A3F'):'var(--muted2)'};border:1px solid ${p.role===r?(r==='captain'?'var(--teal)':'var(--line)'):'var(--line)'}">${lbl}</button>`).join('')}
         </div>
@@ -1214,7 +1224,7 @@ function renderSetup() {
     <div class="srow">
       <span class="rpos">${p.pos}</span>
       <span class="rnick">${p.nick}</span>
-      <span class="rtier">${p.tier}</span>
+      <span class="rtier">${tierLabel(p.tier)}</span>
       <button class="del" onclick="Net.send({type:'delPlayer',playerId:'${p.id}'})">✕</button>
     </div>`).join('') || `<div class="empty-row">매물을 추가하세요</div>`;
 }
