@@ -59,12 +59,14 @@ app.get('/api/import-inhouse', async (req, res) => {
       DI4:1080,DI3:1119,DI2:1158,DI1:1197, GM:2100,CH:2300,
     };
     const VALID_POS = new Set(['TOP','JG','MID','ADC','SUP']);
+    const POS_KO_MAP = { 탑:'TOP', 정글:'JG', 미드:'MID', 원딜:'ADC', 서포터:'SUP' };
+    const toPos = raw => POS_KO_MAP[raw] || (VALID_POS.has(raw) ? raw : '');
     const players = viewers.filter(v => v.name).map(v => {
       const positions = Array.isArray(v.positions) ? v.positions : [];
       const rawPos = positions[0] || '';
-      const pos = VALID_POS.has(rawPos) ? rawPos : 'MID';
+      const pos = toPos(rawPos) || 'MID';
       const rawSub = positions[1] || '';
-      const subPos = VALID_POS.has(rawSub) ? rawSub : (rawSub === '무관' ? '무관' : '');
+      const subPos = toPos(rawSub) || (rawSub === '무관' ? '무관' : '');
       const tierKey = String(v.tier || '');
       let elo = TIER_ELO[tierKey] || 0;
       if (!elo && tierKey.startsWith('MS')) elo = 1500 + (parseInt(tierKey.slice(2)) || 0);
