@@ -1152,7 +1152,7 @@ function bulkMarkFiltered(role) {
 }
 
 function applyImport() {
-  const players  = importState.filter(p => p.role === 'pool').map(({nick,chzzk,pos,subPos,tier,elo,mosts}) => ({nick,chzzk,pos,subPos,tier,elo,mosts}));
+  const players  = importState.filter(p => p.role === 'pool').map(({nick,chzzk,pos,subPos,tier,elo,mosts,discordId}) => ({nick,chzzk,pos,subPos,tier,elo,mosts,discordId}));
   const captains = importState.filter(p => p.role === 'captain').map(p => ({ name: p.nick }));
   if (!players.length && !captains.length) { toast('가져올 항목이 없습니다 (제외만 선택됨)'); return; }
   Net.send({ type: 'importPlayers', players, captains });
