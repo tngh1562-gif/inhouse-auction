@@ -1002,7 +1002,7 @@ function renderQueue() {
     let badge = '';
     if (isLive) badge = `<div class="qbadge live">▶ 진행 중</div>`;
     else if (p.status === 'sold') { const t=teamById(p.soldTo); badge=`<div class="qbadge sold">→ ${t?t.name:''} ${fmt(p.price)}P</div>`; }
-    else if (p.status === 'pass') badge = `<div class="qbadge pass">유찰</div>`;
+    else if (p.status === 'wait' && p.passCount) badge = `<div class="qbadge pass">유찰 ${p.passCount}회</div>`;
 
     cards.push(`<div class="qcard ${done?'done-q':''} ${isLive?'active-q':''} ${isHost&&p.status==='wait'?'host-q':''}"
       ${isHost&&p.status==='wait'?`onclick="Net.send({type:'startLot',playerId:'${p.id}'})"`:''}

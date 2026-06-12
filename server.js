@@ -244,7 +244,7 @@ wss.on('connection', ws => {
           elo: +p.elo || 0,
           mosts: Array.isArray(p.mosts) ? p.mosts.slice(0, 3).map(m => String(m).slice(0, 30)) : [],
           discordId: String(p.discordId || '').replace(/\D/g, ''),
-          status: 'wait', soldTo: null, price: 0,
+          status: 'wait', soldTo: null, price: 0, passCount: 0,
         });
         added++;
       }
@@ -267,7 +267,7 @@ wss.on('connection', ws => {
         id: 'p'+Date.now()+Math.floor(Math.random()*9999),
         nick, chzzk: '', pos: msg.pos||'MID', subPos: '',
         tier: String(msg.tier||'').trim().slice(0,12)||'언랭',
-        elo: +msg.elo||0, mosts: [], status:'wait', soldTo:null, price:0,
+        elo: +msg.elo||0, mosts: [], status:'wait', soldTo:null, price:0, passCount:0,
       });
       broadcast(room, { type:'state', state:toState(room) });
       return;
@@ -289,11 +289,8 @@ wss.on('connection', ws => {
       room.teams.forEach(t => { if (t.roster.length === 0) t.points = room.config.points; });
       pushLog(room, { type:'sys', text:'<b>경매 시작!</b> 매물이 랜덤으로 등장합니다.' });
       broadcast(room, { type:'state', state:toState(room) });
-      const wait = room.pool.filter(p => p.status === 'wait');
-      if (wait.length) {
-        const next = wait[Math.floor(Math.random() * wait.length)];
-        setTimeout(() => startLot(room, next.id), 800);
-      }
+      const next = pickFromWait(room);
+      if (next) setTimeout(() => startLot(room, next.id), 800);
       return;
     }
 
@@ -445,19 +442,30 @@ function passLot(room) {
   const lot = room.pool.find(p => p.id === room.currentId);
   if (!lot) return;
   stopTimer(room);
-  lot.status = 'pass';
+  lot.status = 'wait';
+  lot.passCount = (lot.passCount || 0) + 1;
+  // 유찰된 매물은 대기열 맨 뒤로 이동시켜 다른 매물이 먼저 나오게 함
+  room.pool = room.pool.filter(p => p.id !== lot.id);
+  room.pool.push(lot);
   pushLog(room, { type:'pass', nick:lot.nick });
-  broadcast(room, { type:'toast', msg:`${lot.nick} 유찰` });
+  broadcast(room, { type:'toast', msg:`${lot.nick} 유찰 (대기열 맨 뒤로 이동)` });
   advanceLot(room);
+}
+
+function pickFromWait(room) {
+  const wait = room.pool.filter(p => p.status === 'wait');
+  if (!wait.length) return null;
+  const minPass = Math.min(...wait.map(p => p.passCount || 0));
+  const candidates = wait.filter(p => (p.passCount || 0) === minPass);
+  return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
 function advanceLot(room) {
   room.currentId = null;
   room.bid = { amount:0, teamId:null, history:[] };
-  const wait = room.pool.filter(p => p.status === 'wait');
-  if (wait.length) {
+  const next = pickFromWait(room);
+  if (next) {
     broadcast(room, { type:'state', state:toState(room) });
-    const next = wait[Math.floor(Math.random() * wait.length)];
     setTimeout(() => startLot(room, next.id), 1500);
   } else {
     room.phase = 'ended';
@@ -540,7 +548,7 @@ function createDemoRoom() {
       id: 'demo' + i,
       nick, chzzk, pos, subPos, tier, elo,
       mosts: [DEMO_CHAMPS[i % 20], DEMO_CHAMPS[(i + 3) % 20], DEMO_CHAMPS[(i + 7) % 20]],
-      status: 'wait', soldTo: null, price: 0,
+      status: 'wait', soldTo: null, price: 0, passCount: 0,
     };
   });
 
@@ -551,10 +559,8 @@ function createDemoRoom() {
 }
 
 function pickNextLot(room, delay) {
-  const wait = room.pool.filter(p => p.status === 'wait');
-  if (!wait.length) return;
-  const next = wait[Math.floor(Math.random() * wait.length)];
-  setTimeout(() => startLot(room, next.id), delay);
+  const next = pickFromWait(room);
+  if (next) setTimeout(() => startLot(room, next.id), delay);
 }
 
 function botTick(room) {
@@ -571,7 +577,7 @@ function botTick(room) {
 }
 
 function resetDemo(room) {
-  room.pool.forEach(p => { p.status = 'wait'; p.soldTo = null; p.price = 0; });
+  room.pool.forEach(p => { p.status = 'wait'; p.soldTo = null; p.price = 0; p.passCount = 0; });
   room.teams.forEach(t => { t.roster = []; t.points = room.config.points; });
   room.currentId = null;
   room.bid = { amount:0, teamId:null, history:[] };
