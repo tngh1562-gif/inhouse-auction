@@ -76,6 +76,7 @@ app.get('/api/import-inhouse', async (req, res) => {
         tier: tierKey || '언랭', elo,
         mosts: Array.isArray(v.mosts) ? v.mosts.slice(0, 3) : [],
         voted, discordId: String(v.discordId || '').replace(/\D/g, ''),
+        mic: v.mic || '불가',
       };
     });
     res.json({
@@ -257,6 +258,7 @@ wss.on('connection', ws => {
           elo: +p.elo || 0,
           mosts: Array.isArray(p.mosts) ? p.mosts.slice(0, 3).map(m => String(m).slice(0, 30)) : [],
           discordId: String(p.discordId || '').replace(/\D/g, ''),
+          mic: String(p.mic || '').slice(0, 12),
           status: 'wait', soldTo: null, price: 0, passCount: 0,
         });
         added++;
@@ -557,11 +559,12 @@ function createDemoRoom() {
     const pos = POS5[Math.floor(i / 4)];
     const subPos = POS5[(Math.floor(i / 4) + 1) % 5];
     const [tier, elo] = DEMO_TIERS[i % DEMO_TIERS.length];
+    const mic = ['가능','가능','부분가능','불가'][i % 4];
     return {
       id: 'demo' + i,
       nick, chzzk, pos, subPos, tier, elo,
       mosts: [DEMO_CHAMPS[i % 20], DEMO_CHAMPS[(i + 3) % 20], DEMO_CHAMPS[(i + 7) % 20]],
-      status: 'wait', soldTo: null, price: 0, passCount: 0,
+      mic, status: 'wait', soldTo: null, price: 0, passCount: 0,
     };
   });
 

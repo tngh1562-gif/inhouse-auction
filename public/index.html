@@ -96,8 +96,11 @@ ul{list-style:none}
 .lot-eyebrow{display:inline-block;font-family:var(--fm);font-size:11px;letter-spacing:4px;color:#1A1448;text-transform:uppercase;margin-bottom:8px;background:var(--grad-aur);border-radius:999px;padding:3px 12px;font-weight:800;box-shadow:0 6px 20px -8px rgba(124,178,255,.65)}
 .lot-nick{font-family:var(--fd);font-size:24px;letter-spacing:.3px;line-height:1;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lot-tags{display:flex;gap:9px;flex-wrap:wrap}
-.tag{font-size:13.5px;font-weight:700;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--muted);backdrop-filter:var(--glass)}
+.tag{font-size:13.5px;font-weight:700;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--muted);backdrop-filter:var(--glass);white-space:nowrap}
 .tag.tier{color:#1A1448;background:var(--grad-gold);border-color:transparent;font-weight:800;box-shadow:0 6px 18px -8px rgba(255,176,71,.6)}
+.tag.mic-ok{color:var(--teal);border-color:rgba(110,250,214,.3);background:rgba(110,250,214,.08)}
+.tag.mic-partial{color:var(--gold);border-color:rgba(255,213,107,.3);background:rgba(255,213,107,.08)}
+.tag.mic-no{color:var(--hot);border-color:rgba(255,107,149,.3);background:rgba(255,107,149,.08)}
 .lot-card.empty{min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--muted);gap:6px}
 .lot-card.empty .eg{font-size:28px;opacity:.35}
 .lot-card.active{flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:18px;padding:26px 22px;height:100%;
@@ -858,6 +861,13 @@ function renderLot() {
 
   const subPos = lot.subPos && lot.subPos !== '무관' && lot.subPos !== lot.pos ? lot.subPos : null;
 
+  const micTag = (() => {
+    if (lot.mic === '가능') return `<span class="tag mic-ok">🎤 마이크 가능</span>`;
+    if (lot.mic === '부분가능') return `<span class="tag mic-partial">🎤 마이크 부분가능</span>`;
+    if (lot.mic === '불가') return `<span class="tag mic-no">🔇 마이크 불가</span>`;
+    return '';
+  })();
+
   el.innerHTML = `
     <div class="lot-eyebrow">NOW ON THE BLOCK</div>
     <div class="champ-row">${champRow}</div>
@@ -869,6 +879,7 @@ function renderLot() {
       <span class="tag" style="color:var(--teal);border-color:rgba(15,169,142,.28)">주포 <b style="color:var(--text)">${lot.pos}</b></span>
       ${subPos ? `<span class="tag" style="color:var(--muted)">부포 <b style="color:var(--text)">${subPos}</b></span>` : ''}
       <span class="tag tier">${tierLabel(lot.tier)}</span>
+      ${micTag}
     </div>`;
 }
 
@@ -1140,7 +1151,7 @@ function bulkMarkFiltered(role) {
 }
 
 function applyImport() {
-  const players  = importState.filter(p => p.role === 'pool').map(({nick,chzzk,pos,subPos,tier,elo,mosts,discordId}) => ({nick,chzzk,pos,subPos,tier,elo,mosts,discordId}));
+  const players  = importState.filter(p => p.role === 'pool').map(({nick,chzzk,pos,subPos,tier,elo,mosts,discordId,mic}) => ({nick,chzzk,pos,subPos,tier,elo,mosts,discordId,mic}));
   const captains = importState.filter(p => p.role === 'captain').map(p => ({ name: p.nick }));
   if (!players.length && !captains.length) { toast('가져올 항목이 없습니다 (제외만 선택됨)'); return; }
   Net.send({ type: 'importPlayers', players, captains });
