@@ -172,6 +172,8 @@ wss.on('connection', ws => {
       if (me.role !== 'host') return;
       Object.assign(room.config, msg.config);
       room.step = room.config.step;
+      // 팀별로 따로 설정한 포인트는 유지하고, 나머지 팀에만 새 기본 포인트 적용
+      room.teams.forEach(t => { if (!t.customPoints) t.points = room.config.points; });
       broadcast(room, { type:'state', state:toState(room) });
       return;
     }
@@ -197,6 +199,17 @@ wss.on('connection', ws => {
       if (me.role !== 'host') return;
       const t = room.teams.find(t => t.id === msg.teamId);
       if (t && msg.name) t.name = String(msg.name).trim().slice(0, 20);
+      broadcast(room, { type:'state', state:toState(room) });
+      return;
+    }
+
+    /* ── host: per-team starting points override ── */
+    if (msg.type === 'setTeamPoints') {
+      if (me.role !== 'host') return;
+      const t = room.teams.find(t => t.id === msg.teamId);
+      if (!t) return;
+      t.points = Math.max(0, Math.floor(+msg.points) || 0);
+      t.customPoints = true;
       broadcast(room, { type:'state', state:toState(room) });
       return;
     }
@@ -285,8 +298,8 @@ wss.on('connection', ws => {
       if (room.teams.length < 2) { send(ws,{type:'toast',msg:'팀이 2개 이상이어야 합니다'}); return; }
       if (!room.pool.length)     { send(ws,{type:'toast',msg:'매물이 1명 이상이어야 합니다'}); return; }
       room.phase = 'auction';
-      // reset team points to config
-      room.teams.forEach(t => { if (t.roster.length === 0) t.points = room.config.points; });
+      // reset team points to config (팀별로 따로 설정한 포인트는 유지)
+      room.teams.forEach(t => { if (t.roster.length === 0 && !t.customPoints) t.points = room.config.points; });
       pushLog(room, { type:'sys', text:'<b>경매 시작!</b> 매물이 랜덤으로 등장합니다.' });
       broadcast(room, { type:'state', state:toState(room) });
       const next = pickFromWait(room);
