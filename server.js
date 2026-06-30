@@ -361,7 +361,10 @@ wss.on('connection', ws => {
         try {
           const r = await fetch(`${base}/api/auction-move-voice-teams`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-viewer-secret': process.env.VIEWER_SERVER_SECRET || 'davido-admin',
+            },
             body: JSON.stringify({ teams }),
             signal: AbortSignal.timeout(15000),
           });
