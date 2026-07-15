@@ -238,9 +238,9 @@ wss.on('connection', ws => {
       }
       targetMe.teamId = team.id;
       team.captainName = targetMe.name;
-      // pool에서 팀장의 discordId 조회 (nick 또는 chzzk로 매칭)
+      // pool 또는 이전 임포트 팀장 맵에서 discordId 조회
       const capInPool = room.pool.find(p => p.nick === targetMe.name || p.chzzk === targetMe.name);
-      const capDiscordId = capInPool?.discordId || targetMe.discordId || '';
+      const capDiscordId = capInPool?.discordId || room._capIdMap?.[targetMe.name] || targetMe.discordId || '';
       team.captainDiscordId = capDiscordId;
       // 다른 팀에 동일 이름/discordId로 남아 있는 임포트 팀장 제거
       for (const t of room.teams) {
@@ -275,13 +275,21 @@ wss.on('connection', ws => {
         });
         added++;
       }
-      // 웹소켓으로 입장한 팀장의 discordId가 없으면 pool에서 nick/chzzk 매칭으로 채움
+      // 임포트된 팀장의 name→discordId 맵을 room에 저장 (assignCaptain에서도 사용)
+      if (!room._capIdMap) room._capIdMap = {};
+      for (const c of (msg.captains || [])) {
+        const name = String(c.name || '').trim();
+        const discordId = String(c.discordId || '').replace(/\D/g, '');
+        if (name && discordId) room._capIdMap[name] = discordId;
+      }
+      // 웹소켓으로 입장한 팀장의 discordId가 없으면 pool 또는 _capIdMap에서 채움
       for (const team of room.teams) {
         if (team.captainName && !team.captainDiscordId) {
-          const match = room.pool.find(p =>
+          const poolMatch = room.pool.find(p =>
             p.nick === team.captainName || p.chzzk === team.captainName
           );
-          if (match?.discordId) team.captainDiscordId = match.discordId;
+          const discordId = poolMatch?.discordId || room._capIdMap[team.captainName] || '';
+          if (discordId) team.captainDiscordId = discordId;
         }
       }
       // 이미 팀장으로 등록된 discordId/이름 수집 (중복 방지)
