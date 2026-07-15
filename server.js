@@ -238,9 +238,18 @@ wss.on('connection', ws => {
       }
       targetMe.teamId = team.id;
       team.captainName = targetMe.name;
-      // pool에서 팀장의 discordId 조회
-      const capInPool = room.pool.find(p => p.nick === targetMe.name);
-      team.captainDiscordId = capInPool?.discordId || targetMe.discordId || '';
+      // pool에서 팀장의 discordId 조회 (nick 또는 chzzk로 매칭)
+      const capInPool = room.pool.find(p => p.nick === targetMe.name || p.chzzk === targetMe.name);
+      const capDiscordId = capInPool?.discordId || targetMe.discordId || '';
+      team.captainDiscordId = capDiscordId;
+      // 다른 팀에 동일 이름/discordId로 남아 있는 임포트 팀장 제거
+      for (const t of room.teams) {
+        if (t.id === team.id) continue;
+        if (t.captainName === targetMe.name || (capDiscordId && t.captainDiscordId === capDiscordId)) {
+          t.captainName = '';
+          t.captainDiscordId = '';
+        }
+      }
       send(targetWs, { type: 'assigned', teamId: team.id });
       broadcast(room, { type: 'state', state: toState(room) });
       return;
