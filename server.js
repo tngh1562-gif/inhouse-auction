@@ -238,6 +238,9 @@ wss.on('connection', ws => {
       }
       targetMe.teamId = team.id;
       team.captainName = targetMe.name;
+      // pool에서 팀장의 discordId 조회
+      const capInPool = room.pool.find(p => p.nick === targetMe.name);
+      team.captainDiscordId = capInPool?.discordId || targetMe.discordId || '';
       send(targetWs, { type: 'assigned', teamId: team.id });
       broadcast(room, { type: 'state', state: toState(room) });
       return;
@@ -263,12 +266,33 @@ wss.on('connection', ws => {
         });
         added++;
       }
-      const captainNames = (msg.captains || [])
-        .map(c => String(c.name || '').trim().slice(0, 20))
-        .filter(Boolean);
-      for (let i = 0; i < captainNames.length && i < room.teams.length; i++) {
-        room.teams[i].captainName = captainNames[i];
+      // 웹소켓으로 입장한 팀장의 discordId가 없으면 pool에서 nick/chzzk 매칭으로 채움
+      for (const team of room.teams) {
+        if (team.captainName && !team.captainDiscordId) {
+          const match = room.pool.find(p =>
+            p.nick === team.captainName || p.chzzk === team.captainName
+          );
+          if (match?.discordId) team.captainDiscordId = match.discordId;
+        }
       }
+      // 이미 팀장으로 등록된 discordId/이름 수집 (중복 방지)
+      const usedDiscordIds = new Set(room.teams.map(t => t.captainDiscordId).filter(Boolean));
+      const usedNames = new Set(room.teams.map(t => t.captainName).filter(Boolean));
+      const captains = (msg.captains || []).filter(c => String(c.name || '').trim());
+      let skipped = 0;
+      for (let i = 0; i < captains.length && i < room.teams.length; i++) {
+        const capName = String(captains[i].name || '').trim().slice(0, 20);
+        const discordId = String(captains[i].discordId || '').replace(/\D/g, '');
+        if ((discordId && usedDiscordIds.has(discordId)) || usedNames.has(capName)) {
+          skipped++;
+          continue;
+        }
+        room.teams[i].captainName = capName;
+        room.teams[i].captainDiscordId = discordId;
+        if (discordId) usedDiscordIds.add(discordId);
+        usedNames.add(capName);
+      }
+      if (skipped) send(ws, { type: 'toast', msg: `중복 팀장 ${skipped}명 자동 제외 (이미 다른 팀에 존재)` });
       broadcast(room, { type: 'state', state: toState(room) });
       return;
     }
@@ -351,7 +375,7 @@ wss.on('connection', ws => {
       const base = String(msg.inhouseUrl || '').trim().replace(/\/+$/, '') || 'http://localhost:3000';
       const teams = room.teams.map(t => ({
         name: t.name,
-        discordIds: t.roster.map(p => p.discordId).filter(Boolean),
+        discordIds: [t.captainDiscordId, ...t.roster.map(p => p.discordId)].filter(Boolean),
       }));
       if (!teams.some(t => t.discordIds.length)) {
         send(ws, { type:'toast', msg:'디스코드 연동된 팀원이 없습니다' });
@@ -359,6 +383,7 @@ wss.on('connection', ws => {
       }
       (async () => {
         try {
+          send(ws, { type:'toast', msg:'🔊 디스코드 이동 요청 중…' });
           const r = await fetch(`${base}/api/auction-move-voice-teams`, {
             method: 'POST',
             headers: {
@@ -366,17 +391,20 @@ wss.on('connection', ws => {
               'x-viewer-secret': process.env.VIEWER_SERVER_SECRET || 'davido-admin',
             },
             body: JSON.stringify({ teams }),
-            signal: AbortSignal.timeout(15000),
+            signal: AbortSignal.timeout(40000),
           });
           const data = await r.json();
           if (data.ok) {
+            const movedDetail = data.moved ? Object.entries(data.moved).map(([n,c]) => `${n}:${c}명`).join(' ') : '';
             const movedTotal = Object.values(data.moved || {}).reduce((a,b) => a + (+b || 0), 0);
-            broadcast(room, { type:'toast', msg:`🔊 디스코드 이동 완료 (${movedTotal}명)` });
+            const errNote = data.errors?.length ? ` (일부 실패: ${data.errors.join(', ')})` : '';
+            broadcast(room, { type:'toast', msg:`🔊 이동 완료 ${movedTotal}명 — ${movedDetail}${errNote}` });
           } else {
-            send(ws, { type:'toast', msg:'디스코드 이동 실패: ' + (data.error || '알 수 없는 오류') });
+            send(ws, { type:'toast', msg:'❌ 디스코드 이동 실패: ' + (data.error || '알 수 없는 오류') });
           }
         } catch (err) {
-          send(ws, { type:'toast', msg:'디스코드 이동 실패: ' + err.message });
+          const hint = err.name === 'TimeoutError' ? '(타임아웃 — 봇 응답 없음)' : err.message;
+          send(ws, { type:'toast', msg:'❌ 디스코드 이동 실패: ' + hint });
         }
       })();
       return;

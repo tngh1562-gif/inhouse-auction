@@ -1152,7 +1152,7 @@ function bulkMarkFiltered(role) {
 
 function applyImport() {
   const players  = importState.filter(p => p.role === 'pool').map(({nick,chzzk,pos,subPos,tier,elo,mosts,discordId,mic}) => ({nick,chzzk,pos,subPos,tier,elo,mosts,discordId,mic}));
-  const captains = importState.filter(p => p.role === 'captain').map(p => ({ name: p.nick }));
+  const captains = importState.filter(p => p.role === 'captain').map(p => ({ name: p.chzzk || p.nick, discordId: p.discordId || '' }));
   if (!players.length && !captains.length) { toast('가져올 항목이 없습니다 (제외만 선택됨)'); return; }
   Net.send({ type: 'importPlayers', players, captains });
   const parts = [];
@@ -1267,9 +1267,19 @@ function renderResult() {
 }
 
 function moveDiscordTeams() {
-  const inhouseUrl = ($('#inhouseUrl').value || '').trim() || 'http://localhost:3000';
+  const raw = ($('#inhouseUrl').value || '').trim();
+  if (!raw || raw === 'http://localhost:3000') {
+    const confirm = window.confirm(
+      '⚠️ 내전사이트 주소가 localhost로 설정되어 있습니다.\n' +
+      '프로덕션 주소(예: https://davido-inhouse.up.railway.app)로 바꿔야 합니다.\n\n' +
+      '그래도 진행하시겠습니까?'
+    );
+    if (!confirm) return;
+  }
+  const inhouseUrl = raw || 'http://localhost:3000';
+  try { localStorage.setItem('auctionInhouseUrl', inhouseUrl); } catch(_) {}
   Net.send({ type:'moveDiscordTeams', inhouseUrl });
-  toast('디스코드 이동 요청을 보냈습니다…');
+  toast('🔊 디스코드 이동 요청 중…');
 }
 
 /* ─── Toast ─────────────────────────────────────────────────── */
@@ -1279,6 +1289,15 @@ function toast(msg) {
 }
 
 /* ─── Init ──────────────────────────────────────────────────── */
+// localStorage에 저장된 내전사이트 URL 복원
+try {
+  const saved = localStorage.getItem('auctionInhouseUrl');
+  if (saved) {
+    const el = document.getElementById('inhouseUrl');
+    if (el) el.value = saved;
+  }
+} catch(_) {}
+
 if (ROOM_ID) Net.connect();
 </script>
 </body>
